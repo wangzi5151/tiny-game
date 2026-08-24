@@ -3,501 +3,1329 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>高阶益智游戏合集（修复版）</title>
+    <title>高阶益智游戏合集</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: "Microsoft Yahei", sans-serif;
+        :root {
+            --primary: #6c5ce7;
+            --primary-light: #a29bfe;
+            --success: #00b894;
+            --danger: #e17055;
+            --warning: #fdcb6e;
+            --info: #74b9ff;
+            --dark: #2d3436;
+            --bg1: #2c3e50;
+            --bg2: #4a69bd;
+            --card-bg: rgba(255,255,255,0.12);
+            --card-hover: rgba(255,255,255,0.22);
+            --text: #ffffff;
+            --text-dim: rgba(255,255,255,0.7);
+            --radius: 14px;
+            --shadow: 0 6px 20px rgba(0,0,0,0.25);
         }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: linear-gradient(135deg, #2c3e50, #4a69bd);
+            background: linear-gradient(135deg, var(--bg1), var(--bg2));
             min-height: 100vh;
-            padding: 20px;
-            color: #fff;
+            padding: 16px;
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
-        .container { max-width: 1200px; margin: 0 auto; }
-        h1 { text-align: center; font-size: 2.6rem; margin: 20px 0; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-        .subtitle { text-align: center; margin-bottom: 35px; opacity: 0.8; font-size: 1.05rem; }
-        .game-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            font-size: clamp(1.6rem, 5vw, 2.4rem);
+            margin: 16px 0 8px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .subtitle {
+            text-align: center;
+            margin-bottom: 28px;
+            opacity: 0.75;
+            font-size: 0.95rem;
+        }
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 14px;
+            margin-bottom: 30px;
+        }
         .game-card {
-            background: rgba(255,255,255,0.15);
+            background: var(--card-bg);
             backdrop-filter: blur(8px);
-            border-radius: 16px;
-            padding: 22px 12px;
+            border-radius: var(--radius);
+            padding: 20px 10px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.25s ease;
+            border: 1px solid rgba(255,255,255,0.15);
         }
-        .game-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 8px 25px rgba(0,0,0,0.25); background: rgba(255,255,255,0.25); }
-        .game-icon { font-size: 2.4rem; margin-bottom: 10px; }
-        .game-name { font-size: 1rem; font-weight: 500; }
-        .game-desc { font-size: 0.8rem; opacity: 0.7; margin-top: 4px; }
+        .game-card:hover, .game-card:active {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: var(--shadow);
+            background: var(--card-hover);
+        }
+        .game-card .icon { font-size: 2.2rem; margin-bottom: 8px; }
+        .game-card .name { font-size: 0.9rem; font-weight: 600; }
+        .game-card .desc { font-size: 0.72rem; opacity: 0.6; margin-top: 3px; }
+
         .game-panel {
-            background: rgba(255,255,255,0.12);
+            background: var(--card-bg);
             backdrop-filter: blur(10px);
             border-radius: 20px;
-            padding: 30px;
-            min-height: 580px;
+            padding: 24px 20px;
+            min-height: 500px;
             display: none;
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.15);
         }
-        .game-panel.active { display: block; animation: fadeIn 0.4s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .back-btn { padding: 9px 22px; background: #e55039; color: #fff; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; margin-bottom: 25px; transition: 0.2s; }
-        .back-btn:hover { opacity: 0.9; }
-        .game-content { text-align: center; }
-        .game-content h2 { font-size: 2rem; margin-bottom: 18px; color: #ffd32a; }
-        .rule { font-size: 1rem; margin-bottom: 20px; line-height: 1.6; opacity: 0.9; }
-        .btn { padding: 11px 24px; margin: 7px; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: 0.2s; }
-        .btn:hover { transform: scale(1.04); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        .btn-blue { background: #3867d6; color: #fff; }
-        .btn-green { background: #20bf6b; color: #fff; }
-        .btn-yellow { background: #f7d794; color: #222; }
-        .btn-red { background: #eb4d4b; color: #fff; }
-        .big-text { font-size: 4rem; font-weight: bold; margin: 25px 0; }
-        .tip-text { font-size: 1.1rem; margin: 15px 0; min-height: 30px; }
-        .success { color: #20bf6b; }
-        .fail { color: #eb4d4b; }
-        .normal { color: #f7d794; }
-        .card-wrap { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin: 25px 0; }
-        .card { width: 68px; height: 68px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #333; cursor: pointer; }
-        .card-back { background: #485460; color: transparent; }
-        .input { padding: 12px 16px; font-size: 1rem; border-radius: 8px; border: none; width: 210px; margin: 12px 0; outline: none; }
-        .color-box { width: 150px; height: 150px; border-radius: 14px; margin: 20px auto; box-shadow: 0 6px 18px rgba(0,0,0,0.2); }
+        .game-panel.active { display: block; animation: fadeIn 0.35s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+        .back-btn {
+            padding: 8px 18px;
+            background: var(--danger);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: 0.2s;
+        }
+        .back-btn:hover { opacity: 0.85; }
+
+        .gc { text-align: center; }
+        .gc h2 { font-size: 1.6rem; margin-bottom: 12px; color: var(--warning); }
+        .rule { font-size: 0.9rem; margin-bottom: 16px; line-height: 1.5; opacity: 0.85; }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-block;
+        }
+        .btn:hover { transform: scale(1.04); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .btn:active { transform: scale(0.97); }
+        .btn-blue { background: var(--info); color: var(--dark); }
+        .btn-green { background: var(--success); color: #fff; }
+        .btn-yellow { background: var(--warning); color: var(--dark); }
+        .btn-red { background: var(--danger); color: #fff; }
+        .btn-purple { background: var(--primary); color: #fff; }
+        .big-text { font-size: clamp(2rem, 8vw, 3.5rem); font-weight: bold; margin: 18px 0; }
+        .tip { font-size: 0.95rem; margin: 12px 0; min-height: 24px; }
+        .tip-ok { color: var(--success); }
+        .tip-err { color: var(--danger); }
+        .tip-info { color: var(--warning); }
+        .score-row { font-size: 0.9rem; margin: 8px 0; opacity: 0.8; }
+        .score-row span { font-weight: bold; color: var(--warning); }
+
+        .input {
+            padding: 10px 14px;
+            font-size: 1rem;
+            border-radius: 8px;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            width: 200px;
+            margin: 8px 0;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .input:focus { border-color: var(--primary-light); }
+        .input::placeholder { color: rgba(255,255,255,0.4); }
+
+        .card-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin: 18px 0;
+        }
+        .mem-card {
+            width: 60px;
+            height: 60px;
+            background: var(--primary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: all 0.25s;
+            color: transparent;
+        }
+        .mem-card.flipped { background: rgba(255,255,255,0.9); color: var(--dark); }
+        .mem-card.matched { background: var(--success); color: #fff; pointer-events: none; }
+
+        .color-box {
+            width: 140px;
+            height: 140px;
+            border-radius: var(--radius);
+            margin: 16px auto;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: #fff;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 3px;
+            margin: 12px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--success);
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .hp-bar {
+            width: 100%;
+            max-width: 300px;
+            height: 12px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 6px;
+            margin: 6px auto;
+            overflow: hidden;
+        }
+        .hp-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.3s;
+        }
+        .hp-player { background: var(--success); }
+        .hp-enemy { background: var(--danger); }
+
+        @media (max-width: 480px) {
+            .game-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+            .game-card { padding: 14px 6px; }
+            .game-card .icon { font-size: 1.8rem; }
+            .game-panel { padding: 18px 14px; min-height: 400px; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎮 高阶益智游戏合集（修复版）</h1>
-        <p class="subtitle">20款解谜 / 对战 / 记忆 / 策略休闲游戏</p>
+        <h1>🎮 高阶益智游戏合集</h1>
+        <p class="subtitle">20款益智 / 对战 / 记忆 / 策略休闲游戏</p>
 
-        <div class="game-list" id="gameList">
-            <div class="game-card" data-id="1"><div class="game-icon">🎯</div><div class="game-name">进阶猜数字</div><div class="game-desc">推理范围猜答案</div></div>
-            <div class="game-card" data-id="2"><div class="game-icon">🧠</div><div class="game-name">记忆翻牌</div><div class="game-desc">记住位置完成配对</div></div>
-            <div class="game-card" data-id="3"><div class="game-icon">⚔️</div><div class="game-name">石头剪刀布PK</div><div class="game-desc">五局三胜对战</div></div>
-            <div class="game-card" data-id="4"><div class="game-icon">⚡</div><div class="game-name">反应速度测试</div><div class="game-desc">检测你的瞬时反应</div></div>
-            <div class="game-card" data-id="5"><div class="game-icon">🎲</div><div class="game-name">骰子竞猜</div><div class="game-desc">猜点数大小</div></div>
-            <div class="game-card" data-id="6"><div class="game-icon">🎰</div><div class="game-name">水果老虎机</div><div class="game-desc">三图相同即可中奖</div></div>
-            <div class="game-card" data-id="7"><div class="game-icon">🔤</div><div class="game-name">词语接龙</div><div class="game-desc">首尾文字相接闯关</div></div>
-            <div class="game-card" data-id="8"><div class="game-icon">🎨</div><div class="game-name">色彩辨识</div><div class="game-desc">识别对应颜色</div></div>
-            <div class="game-card" data-id="9"><div class="game-icon">🗝️</div><div class="game-name">密码破解</div><div class="game-desc">尝试解锁四位密码</div></div>
-            <div class="game-card" data-id="10"><div class="game-icon">😃</div><div class="game-name">表情记忆</div><div class="game-desc">记忆表情顺序</div></div>
-            <div class="game-card" data-id="11"><div class="game-icon">✍️</div><div class="game-name">文字默写</div><div class="game-desc">记忆短句并复刻</div></div>
-            <div class="game-card" data-id="12"><div class="game-icon">🧮</div><div class="game-name">限时速算</div><div class="game-desc">快速口算答题</div></div>
-            <div class="game-card" data-id="13"><div class="game-icon">🪙</div><div class="game-name">硬币博弈</div><div class="game-desc">竞猜正反面</div></div>
-            <div class="game-card" data-id="14"><div class="game-icon">📊</div><div class="game-name">数字大小挑战</div><div class="game-desc">判断数值大小</div></div>
-            <div class="game-card" data-id="15"><div class="game-icon">🎫</div><div class="game-name">随机抽签</div><div class="game-desc">抽取随机人选</div></div>
-            <div class="game-card" data-id="16"><div class="game-icon">🏃</div><div class="game-name">手速挑战</div><div class="game-desc">限时点击比拼</div></div>
-            <div class="game-card" data-id="17"><div class="game-icon">⏱️</div><div class="game-name">精准计时</div><div class="game-desc">控制时间停止</div></div>
-            <div class="game-card" data-id="18"><div class="game-icon">🏆</div><div class="game-name">综合闯关</div><div class="game-desc">多关卡连续挑战</div></div>
-            <div class="game-card" data-id="19"><div class="game-icon">👥</div><div class="game-name">队伍分组</div><div class="game-desc">随机分配小组</div></div>
-            <div class="game-card" data-id="20"><div class="game-icon">🛡️</div><div class="game-name">攻防对战</div><div class="game-desc">策略选择攻防招式</div></div>
-        </div>
+        <div class="game-grid" id="gameGrid"></div>
 
         <div class="game-panel" id="gamePanel">
             <button class="back-btn" id="backBtn">← 返回列表</button>
-            <div class="game-content" id="gameContent"></div>
+            <div class="gc" id="gc"></div>
         </div>
     </div>
 
-    <script>
-        // 所有逻辑都包在 DOMContentLoaded 里，避免作用域问题
-        document.addEventListener('DOMContentLoaded', function() {
-            const gameList = document.getElementById("gameList");
-            const gamePanel = document.getElementById("gamePanel");
-            const gameContent = document.getElementById("gameContent");
-            const backBtn = document.getElementById("backBtn");
-            let timer = null;
+<script>
+(function() {
+    "use strict";
 
-            // 返回列表
-            backBtn.addEventListener('click', function() {
-                clearInterval(timer);
-                gamePanel.classList.remove("active");
-                gameList.style.display = "grid";
-            });
+    var GAMES = [
+        { id:1,  icon:"🎯", name:"进阶猜数字", desc:"推理范围猜答案" },
+        { id:2,  icon:"🧠", name:"记忆翻牌",   desc:"记住位置配对" },
+        { id:3,  icon:"⚔️", name:"石头剪刀布PK", desc:"五局三胜对战" },
+        { id:4,  icon:"⚡", name:"反应速度测试", desc:"检测瞬时反应" },
+        { id:5,  icon:"🎲", name:"骰子竞猜",   desc:"猜点数大小" },
+        { id:6,  icon:"🎰", name:"水果老虎机", desc:"三图相同中奖" },
+        { id:7,  icon:"🔤", name:"词语接龙",   desc:"首尾文字相接" },
+        { id:8,  icon:"🎨", name:"色彩辨识",   desc:"识别对应颜色" },
+        { id:9,  icon:"🗝️", name:"密码破解",   desc:"尝试四位密码" },
+        { id:10, icon:"😃", name:"表情记忆",   desc:"记忆表情顺序" },
+        { id:11, icon:"✍️", name:"文字默写",   desc:"记忆短句复刻" },
+        { id:12, icon:"🧮", name:"限时速算",   desc:"快速口算答题" },
+        { id:13, icon:"🪙", name:"硬币博弈",   desc:"竞猜正反面" },
+        { id:14, icon:"📊", name:"数字大小挑战", desc:"判断数值大小" },
+        { id:15, icon:"🎫", name:"随机抽签",   desc:"抽取随机人选" },
+        { id:16, icon:"🏃", name:"手速挑战",   desc:"限时点击比拼" },
+        { id:17, icon:"⏱️", name:"精准计时",   desc:"控制时间停止" },
+        { id:18, icon:"🏆", name:"综合闯关",   desc:"多关卡连续挑战" },
+        { id:19, icon:"👥", name:"队伍分组",   desc:"随机分配小组" },
+        { id:20, icon:"🛡️", name:"攻防对战",   desc:"策略选择攻防" }
+    ];
 
-            // 点击游戏卡片
-            gameList.addEventListener('click', function(e) {
-                const card = e.target.closest(".game-card");
-                if (!card) return;
-                const gid = card.dataset.id;
-                gameList.style.display = "none";
-                gamePanel.classList.add("active");
-                loadGame(gid);
-            });
+    var grid = document.getElementById("gameGrid");
+    var panel = document.getElementById("gamePanel");
+    var gc = document.getElementById("gc");
+    var backBtn = document.getElementById("backBtn");
+    var timers = [];
 
-            // 加载游戏（全部函数写在内部，全局无依赖）
-            function loadGame(gid) {
-                clearInterval(timer);
-                switch(gid) {
-                    case "1":
-                        let target = Math.floor(Math.random() * 100) + 1;
-                        let guessCnt = 0;
-                        gameContent.innerHTML = `
-                            <h2>进阶猜数字</h2>
-                            <p class="rule">规则：系统随机生成 1~100 数字，根据提示缩小范围猜出答案</p>
-                            <input class="input" id="gInput" placeholder="输入猜测数字">
-                            <button class="btn btn-green" id="guessBtn">提交猜测</button>
-                            <p class="tip-text normal" id="gTip">开始挑战吧</p>
-                            <p>已猜测次数：<span id="gCount">0</span></p>
-                        `;
-                        document.getElementById("guessBtn").addEventListener('click', function() {
-                            const val = parseInt(document.getElementById("gInput").value);
-                            guessCnt++;
-                            document.getElementById("gCount").innerText = guessCnt;
-                            const tip = document.getElementById("gTip");
-                            if(isNaN(val)) {
-                                tip.innerText = "请输入有效数字！";
-                                tip.className = "tip-text fail";
-                                return;
-                            }
-                            if(val > target) {
-                                tip.innerText = "数字偏大，请往小范围猜测";
-                                tip.className = "tip-text normal";
-                            } else if(val < target) {
-                                tip.innerText = "数字偏小，请往大范围猜测";
-                                tip.className = "tip-text normal";
-                            } else {
-                                tip.innerText = `恭喜猜对！总共使用 ${guessCnt} 次机会`;
-                                tip.className = "tip-text success";
-                            }
-                        });
-                        break;
+    function addTimer(id) { timers.push(id); return id; }
+    function clearAllTimers() { timers.forEach(function(t){ clearTimeout(t); clearInterval(t); }); timers = []; }
 
-                    case "2":
-                        gameContent.innerHTML = `
-                            <h2>记忆翻牌</h2>
-                            <p class="rule">翻开卡牌，找出两两相同图案</p>
-                            <div class="card-wrap">
-                                <div class="card card-back" data-txt="🐱">?</div>
-                                <div class="card card-back" data-txt="🐶">?</div>
-                                <div class="card card-back" data-txt="🐱">?</div>
-                                <div class="card card-back" data-txt="🐰">?</div>
-                                <div class="card card-back" data-txt="🐶">?</div>
-                                <div class="card card-back" data-txt="🐰">?</div>
-                            </div>
-                            <p class="tip-text normal" id="cTip">记住图案位置</p>
-                        `;
-                        let firstCard = null;
-                        let firstText = "";
-                        document.querySelectorAll(".card").forEach(card => {
-                            card.addEventListener('click', function() {
-                                const txt = this.dataset.txt;
-                                this.innerText = txt;
-                                this.classList.remove("card-back");
-                                if(!firstCard) {
-                                    firstCard = this;
-                                    firstText = txt;
-                                } else {
-                                    const tip = document.getElementById("cTip");
-                                    if(firstText === txt && firstCard !== this) {
-                                        tip.innerText = "配对成功！";
-                                        tip.className = "tip-text success";
-                                    } else {
-                                        tip.innerText = "配对失败，卡牌复原";
-                                        tip.className = "tip-text fail";
-                                        setTimeout(() => {
-                                            firstCard.innerText = "?";
-                                            this.innerText = "?";
-                                            firstCard.classList.add("card-back");
-                                            this.classList.add("card-back");
-                                        }, 700);
-                                    }
-                                    firstCard = null;
-                                    firstText = "";
-                                }
-                            });
-                        });
-                        break;
+    GAMES.forEach(function(g) {
+        var card = document.createElement("div");
+        card.className = "game-card";
+        card.dataset.id = g.id;
+        card.innerHTML = '<div class="icon">' + g.icon + '</div><div class="name">' + g.name + '</div><div class="desc">' + g.desc + '</div>';
+        card.addEventListener("click", function() { openGame(g.id); });
+        grid.appendChild(card);
+    });
 
-                    case "3":
-                        let userWin = 0, pcWin = 0;
-                        gameContent.innerHTML = `
-                            <h2>石头剪刀布PK</h2>
-                            <p class="rule">五局三胜，率先赢得3局即可获胜</p>
-                            <div class="big-text" id="rpsShow">等待出招</div>
-                            <button class="btn btn-red" data-val="0">✊ 石头</button>
-                            <button class="btn btn-yellow" data-val="1">✌️ 剪刀</button>
-                            <button class="btn btn-blue" data-val="2">🖐️ 布</button>
-                            <p class="tip-text normal" id="rpsTip">请选择招式</p>
-                            <p>我方胜场：<span id="uWin">0</span> &nbsp;&nbsp; 电脑胜场：<span id="pWin">0</span></p>
-                        `;
-                        const rpsArr = ["石头","剪刀","布"];
-                        document.querySelectorAll("[data-val]").forEach(btn => {
-                            btn.addEventListener('click', function() {
-                                const u = parseInt(this.dataset.val);
-                                const pc = Math.floor(Math.random() * 3);
-                                const show = document.getElementById("rpsShow");
-                                const tip = document.getElementById("rpsTip");
-                                show.innerText = `你：${rpsArr[u]}  VS  电脑：${rpsArr[pc]}`;
-                                if(u === pc) {
-                                    tip.innerText = "本局平局";
-                                    tip.className = "tip-text normal";
-                                } else if((u + 1) % 3 === pc) {
-                                    userWin++;
-                                    document.getElementById("uWin").innerText = userWin;
-                                    tip.innerText = "本局你获胜！";
-                                    tip.className = "tip-text success";
-                                } else {
-                                    pcWin++;
-                                    document.getElementById("pWin").innerText = pcWin;
-                                    tip.innerText = "本局电脑获胜";
-                                    tip.className = "tip-text fail";
-                                }
-                                if(userWin >= 3) {
-                                    tip.innerText = "🎉 恭喜你赢得整场比赛！";
-                                } else if(pcWin >= 3) {
-                                    tip.innerText = "😥 电脑赢得比赛，再接再厉";
-                                }
-                            });
-                        });
-                        break;
+    backBtn.addEventListener("click", function() {
+        clearAllTimers();
+        panel.classList.remove("active");
+        grid.style.display = "grid";
+    });
 
-                    case "4":
-                        gameContent.innerHTML = `
-                            <h2>反应速度测试</h2>
-                            <p class="rule">色块变绿色后立刻点击，用时越短反应越快</p>
-                            <div class="color-box" id="reactBox" style="background:#555;line-height:150px;color:#fff;">准备</div>
-                            <button class="btn btn-green" id="startReactBtn">开始测试</button>
-                            <p class="tip-text normal" id="reactTip">点击按钮开始</p>
-                        `;
-                        document.getElementById("startReactBtn").addEventListener('click', function() {
-                            const box = document.getElementById("reactBox");
-                            const tip = document.getElementById("reactTip");
-                            box.style.background = "#555";
-                            box.innerText = "等待变色...";
-                            box.onclick = null;
-                            const delay = Math.floor(Math.random() * 3500) + 1500;
-                            setTimeout(() => {
-                                const st = Date.now();
-                                box.style.background = "#20bf6b";
-                                box.innerText = "快点击！";
-                                box.onclick = function() {
-                                    const time = Date.now() - st;
-                                    box.innerText = time + " ms";
-                                    tip.innerText = `你的反应用时：${time} 毫秒`;
-                                    box.onclick = null;
-                                };
-                            }, delay);
-                        });
-                        break;
+    function openGame(id) {
+        clearAllTimers();
+        grid.style.display = "none";
+        panel.classList.add("active");
+        gc.innerHTML = "";
+        var fn = gameFns[id];
+        if (fn) fn();
+    }
 
-                    case "5":
-                        gameContent.innerHTML = `
-                            <h2>骰子竞猜</h2>
-                            <p class="rule">猜骰子点数总和偏大还是偏小</p>
-                            <div class="big-text" id="diceShow">🎲 ?</div>
-                            <button class="btn btn-blue" data-type="big">猜偏大</button>
-                            <button class="btn btn-red" data-type="small">猜偏小</button>
-                            <p class="tip-text normal" id="diceTip">做出你的选择</p>
-                        `;
-                        document.querySelectorAll("[data-type]").forEach(btn => {
-                            btn.addEventListener('click', function() {
-                                const type = this.dataset.type;
-                                const num = Math.floor(Math.random() * 11) + 2;
-                                document.getElementById("diceShow").innerText = `🎲 ${num}`;
-                                const tip = document.getElementById("diceTip");
-                                if(type === "big") {
-                                    if(num > 6) {
-                                        tip.innerText = "猜对啦！点数偏大";
-                                        tip.className = "tip-text success";
-                                    } else {
-                                        tip.innerText = "猜错了，点数偏小";
-                                        tip.className = "tip-text fail";
-                                    }
-                                } else {
-                                    if(num < 7) {
-                                        tip.innerText = "猜对啦！点数偏小";
-                                        tip.className = "tip-text success";
-                                    } else {
-                                        tip.innerText = "猜错了，点数偏大";
-                                        tip.className = "tip-text fail";
-                                    }
-                                }
-                            });
-                        });
-                        break;
+    function tip(cls, txt) {
+        var el = document.createElement("p");
+        el.className = "tip " + cls;
+        el.textContent = txt;
+        return el;
+    }
 
-                    case "6":
-                        gameContent.innerHTML = `
-                            <h2>水果老虎机</h2>
-                            <p class="rule">三个图案完全一致即为大奖</p>
-                            <div class="big-text" id="slotShow">🍎 🍊 🍌</div>
-                            <button class="btn btn-yellow" id="slotRunBtn">开始抽奖</button>
-                            <p class="tip-text normal" id="slotTip">转动试试手气</p>
-                        `;
-                        const fruit = ["🍎","🍊","🍌","🍇","🍓"];
-                        document.getElementById("slotRunBtn").addEventListener('click', function() {
-                            const a = fruit[Math.floor(Math.random()*fruit.length)];
-                            const b = fruit[Math.floor(Math.random()*fruit.length)];
-                            const c = fruit[Math.floor(Math.random()*fruit.length)];
-                            document.getElementById("slotShow").innerText = `${a} ${b} ${c}`;
-                            const tip = document.getElementById("slotTip");
-                            if(a === b && b === c) {
-                                tip.innerText = "🎉 恭喜中大奖！";
-                                tip.className = "tip-text success";
-                            } else if(a===b || b===c || a===c) {
-                                tip.innerText = "小有收获，两个相同";
-                                tip.className = "tip-text normal";
-                            } else {
-                                tip.innerText = "未中奖，再来一次";
-                                tip.className = "tip-text fail";
-                            }
-                        });
-                        break;
+    var gameFns = {};
 
-                    case "7":
-                        let lastWord = "欢乐";
-                        gameContent.innerHTML = `
-                            <h2>词语接龙</h2>
-                            <p class="rule">用上一个词语最后一字接新词语</p>
-                            <p>当前尾字：<span style="font-size:1.2rem;color:#ffd32a">${lastWord.slice(-1)}</span></p>
-                            <input class="input" id="wordInp" placeholder="输入词语">
-                            <button class="btn btn-green" id="wordLinkBtn">提交接龙</button>
-                            <p class="tip-text normal" id="wordTip">开局词语：${lastWord}</p>
-                        `;
-                        document.getElementById("wordLinkBtn").addEventListener('click', function() {
-                            const w = document.getElementById("wordInp").value.trim();
-                            const tip = document.getElementById("wordTip");
-                            if(w.length < 2) {
-                                tip.innerText = "请输入至少两个字的词语";
-                                tip.className = "tip-text fail";
-                                return;
-                            }
-                            if(w[0] === lastWord.slice(-1)) {
-                                lastWord = w;
-                                tip.innerText = `接龙成功！当前：${w}`;
-                                tip.className = "tip-text success";
-                            } else {
-                                tip.innerText = "首尾字不匹配，重新输入";
-                                tip.className = "tip-text fail";
-                            }
-                        });
-                        break;
+    /* ========== Game 1: 进阶猜数字 ========== */
+    gameFns[1] = function() {
+        var target = Math.floor(Math.random() * 100) + 1;
+        var tries = 0;
+        gc.innerHTML = '<h2>🎯 进阶猜数字</h2><p class="rule">系统随机 1~100，根据提示缩小范围</p>';
+        var inp = document.createElement("input");
+        inp.className = "input";
+        inp.type = "number";
+        inp.placeholder = "输入数字";
+        var btn = document.createElement("button");
+        btn.className = "btn btn-green";
+        btn.textContent = "提交";
+        var t = tip("tip-info", "开始挑战吧");
+        var cnt = document.createElement("p");
+        cnt.className = "score-row";
+        cnt.textContent = "已猜: 0 次";
+        gc.appendChild(inp);
+        gc.appendChild(btn);
+        gc.appendChild(t);
+        gc.appendChild(cnt);
+        btn.addEventListener("click", function() {
+            var v = parseInt(inp.value, 10);
+            if (isNaN(v)) { t.className = "tip tip-err"; t.textContent = "请输入数字"; return; }
+            tries++;
+            cnt.textContent = "已猜: " + tries + " 次";
+            if (v === target) {
+                t.className = "tip tip-ok";
+                t.textContent = "恭喜猜对！用了 " + tries + " 次";
+                btn.disabled = true;
+            } else if (v > target) {
+                t.className = "tip tip-info";
+                t.textContent = "偏大，往小猜";
+            } else {
+                t.className = "tip tip-info";
+                t.textContent = "偏小，往大猜";
+            }
+        });
+        inp.addEventListener("keydown", function(e) { if (e.key === "Enter") btn.click(); });
+    };
 
-                    case "8":
-                        function createColorGame() {
-                            const colorList = [
-                                {n:"红色",c:"#e74c3c"},
-                                {n:"蓝色",c:"#3498db"},
-                                {n:"绿色",c:"#2ecc71"},
-                                {n:"橙色",c:"#f39c12"}
-                            ];
-                            const ran = colorList[Math.floor(Math.random()*colorList.length)];
-                            gameContent.innerHTML = `
-                                <h2>色彩辨识</h2>
-                                <p class="rule">判断下方色块对应的颜色名称</p>
-                                <div class="color-box" style="background:${ran.c}"></div>
-                                <button class="btn btn-red" data-color="红色">红色</button>
-                                <button class="btn btn-blue" data-color="蓝色">蓝色</button>
-                                <button class="btn btn-green" data-color="绿色">绿色</button>
-                                <button class="btn btn-yellow" data-color="橙色">橙色</button>
-                                <p class="tip-text normal" id="colorTip">选择颜色</p>
-                            `;
-                            document.querySelectorAll("[data-color]").forEach(btn => {
-                                btn.addEventListener('click', function() {
-                                    const sel = this.dataset.color;
-                                    const tip = document.getElementById("colorTip");
-                                    if(sel === ran.n) {
-                                        tip.innerText = "判断正确！";
-                                        tip.className = "tip-text success";
-                                    } else {
-                                        tip.innerText = `判断错误，正确为：${ran.n}`;
-                                        tip.className = "tip-text fail";
-                                    }
-                                    setTimeout(createColorGame, 1400);
-                                });
-                            });
+    /* ========== Game 2: 记忆翻牌 ========== */
+    gameFns[2] = function() {
+        gc.innerHTML = '<h2>🧠 记忆翻牌</h2><p class="rule">翻开卡牌，找出三对相同图案</p>';
+        var emojis = ["🐱","🐶","🐰","🦊","🐻","🐼"];
+        var pairs = emojis.slice(0, 3);
+        var cards = pairs.concat(pairs);
+        for (var i = cards.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var tmp = cards[i]; cards[i] = cards[j]; cards[j] = tmp;
+        }
+        var wrap = document.createElement("div");
+        wrap.className = "card-grid";
+        var first = null, locked = false, matched = 0, steps = 0;
+        cards.forEach(function(ch, idx) {
+            var c = document.createElement("div");
+            c.className = "mem-card";
+            c.dataset.ch = ch;
+            c.dataset.idx = idx;
+            c.textContent = "?";
+            c.addEventListener("click", function() {
+                if (locked || this.classList.contains("flipped") || this.classList.contains("matched")) return;
+                this.classList.add("flipped");
+                this.textContent = ch;
+                if (!first) {
+                    first = this;
+                } else {
+                    steps++;
+                    locked = true;
+                    if (first.dataset.ch === ch && first.dataset.idx !== idx) {
+                        first.classList.add("matched");
+                        this.classList.add("matched");
+                        matched++;
+                        locked = false;
+                        first = null;
+                        if (matched === 3) {
+                            gc.appendChild(tip("tip-ok", "全部配对成功！步数: " + steps));
                         }
-                        createColorGame();
-                        break;
+                    } else {
+                        var f = first;
+                        var s = this;
+                        addTimer(setTimeout(function() {
+                            f.classList.remove("flipped");
+                            f.textContent = "?";
+                            s.classList.remove("flipped");
+                            s.textContent = "?";
+                            locked = false;
+                            first = null;
+                        }, 800));
+                    }
+                }
+            });
+            wrap.appendChild(c);
+        });
+        gc.appendChild(wrap);
+        var stepText = document.createElement("p");
+        stepText.className = "score-row";
+        stepText.textContent = "步数: 0";
+        gc.appendChild(stepText);
+        var origClick = wrap.onclick;
+        wrap.addEventListener("click", function() { stepText.textContent = "步数: " + steps; });
+    };
 
-                    case "9":
-                        const pwd = String(Math.floor(1000 + Math.random() * 9000));
-                        gameContent.innerHTML = `
-                            <h2>密码破解</h2>
-                            <p class="rule">尝试破解四位数字密码</p>
-                            <input class="input" id="pwdInp" maxlength="4" placeholder="输入4位数字">
-                            <button class="btn btn-green" id="checkPwdBtn">尝试解锁</button>
-                            <p class="tip-text normal" id="pwdTip">开始破解</p>
-                        `;
-                        document.getElementById("checkPwdBtn").addEventListener('click', function() {
-                            const val = document.getElementById("pwdInp").value;
-                            const tip = document.getElementById("pwdTip");
-                            if(val === pwd) {
-                                tip.innerText = "🔓 密码正确，解锁成功！";
-                                tip.className = "tip-text success";
-                            } else {
-                                tip.innerText = "🔒 密码错误，继续尝试";
-                                tip.className = "tip-text fail";
-                            }
-                        });
-                        break;
+    /* ========== Game 3: 石头剪刀布PK ========== */
+    gameFns[3] = function() {
+        var uW = 0, pW = 0;
+        gc.innerHTML = '<h2>⚔️ 石头剪刀布PK</h2><p class="rule">五局三胜</p>';
+        var show = document.createElement("div");
+        show.className = "big-text";
+        show.textContent = "VS";
+        var t = tip("tip-info", "请选择招式");
+        var sc = document.createElement("p");
+        sc.className = "score-row";
+        sc.innerHTML = '我方: <span id="uw">0</span> &nbsp; 电脑: <span id="pw">0</span>';
+        gc.appendChild(show);
+        var names = ["✊ 石头","✌️ 剪刀","🖐️ 布"];
+        var vals = [0, 1, 2];
+        vals.forEach(function(v) {
+            var b = document.createElement("button");
+            b.className = "btn " + ["btn-red","btn-yellow","btn-blue"][v];
+            b.textContent = names[v];
+            b.addEventListener("click", function() {
+                if (uW >= 3 || pW >= 3) return;
+                var pc = Math.floor(Math.random() * 3);
+                show.textContent = names[v] + "  VS  " + names[pc];
+                if (v === pc) {
+                    t.className = "tip tip-info"; t.textContent = "平局";
+                } else if ((v + 1) % 3 === pc) {
+                    uW++;
+                    t.className = "tip tip-ok"; t.textContent = "你赢了这局！";
+                } else {
+                    pW++;
+                    t.className = "tip tip-err"; t.textContent = "电脑赢了这局";
+                }
+                document.getElementById("uw").textContent = uW;
+                document.getElementById("pw").textContent = pW;
+                if (uW >= 3) { t.className = "tip tip-ok"; t.textContent = "🎉 你赢得比赛！"; }
+                else if (pW >= 3) { t.className = "tip tip-err"; t.textContent = "电脑赢得比赛"; }
+            });
+            gc.appendChild(b);
+        });
+        gc.appendChild(sc);
+        gc.appendChild(t);
+    };
 
-                    case "10":
-                        gameContent.innerHTML = `
-                            <h2>表情记忆</h2>
-                            <p class="rule">翻开卡牌，匹配相同表情</p>
-                            <div class="card-wrap">
-                                <div class="card card-back" data-emo="😎">?</div>
-                                <div class="card card-back" data-emo="🥳">?</div>
-                                <div class="card card-back" data-emo="😎">?</div>
-                                <div class="card card-back" data-emo="😆">?</div>
-                                <div class="card card-back" data-emo="🥳">?</div>
-                                <div class="card card-back" data-emo="😆">?</div>
-                            </div>
-                            <p class="tip-text normal" id="emoTip">记忆表情位置</p>
-                        `;
-                        let e1 = null, eTxt1 = "";
-                        document.querySelectorAll(".card").forEach(card => {
-                            card.addEventListener('click', function() {
-                                const txt = this.dataset.emo;
-                                this.innerText = txt;
-                                this.classList.remove("card-back");
-                                if(!e1) {
-                                    e1 = this;
-                                    eTxt1 = txt;
-                                } else {
-                                    const tip = document.getElementById("emoTip");
-                                    if(eTxt1 === txt && e1 !== this) {
-                                        tip.innerText = "表情配对成功";
-                                        tip.className = "tip-text success";
-                                    } else {
-                                        tip.innerText = "配对失败，自动复原";
-                                        tip.className = "tip-text fail";
-                                        setTimeout(() => {
-                                            e1.innerText = "?";
-                                            this.innerText = "?";
-                                            e1.classList.add("card-back");
-                                            this.classList.add("card-back");
-                                        },700);
-                                    }
-                                    e1 = null; eTxt1 = "";
-                                }
-                            });
-                        });
-                        break;
+    /* ========== Game 4: 反应速度测试 ========== */
+    gameFns[4] = function() {
+        gc.innerHTML = '<h2>⚡ 反应速度测试</h2><p class="rule">色块变绿后立刻点击</p>';
+        var box = document.createElement("div");
+        box.className = "color-box";
+        box.style.background = "#555";
+        box.style.cursor = "pointer";
+        box.textContent = "准备";
+        var btn = document.createElement("button");
+        btn.className = "btn btn-green";
+        btn.textContent = "开始测试";
+        var t = tip("tip-info", "点击开始");
+        gc.appendChild(box);
+        gc.appendChild(btn);
+        gc.appendChild(t);
+        var best = Infinity;
+        btn.addEventListener("click", function() {
+            box.style.background = "#555";
+            box.textContent = "等待变色...";
+            box.style.cursor = "default";
+            t.className = "tip tip-info";
+            t.textContent = "等待中...";
+            var delay = Math.floor(Math.random() * 3000) + 1500;
+            var timerId = addTimer(setTimeout(function() {
+                var start = Date.now();
+                box.style.background = "#00b894";
+                box.textContent = "点我！";
+                box.style.cursor = "pointer";
+                box.onclick = function() {
+                    var time = Date.now() - start;
+                    box.textContent = time + " ms";
+                    box.style.cursor = "default";
+                    box.onclick = null;
+                    t.className = "tip " + (time < 300 ? "tip-ok" : time < 500 ? "tip-info" : "tip-err");
+                    t.textContent = "反应时间: " + time + "ms" + (time < 300 ? " 🏆 极速!" : time < 500 ? " 不错!" : " 继续努力");
+                    if (time < best) { best = time; }
+                    gc.appendChild(document.createTextNode(""));
+                };
+            }, delay));
+        });
+    };
 
-                    case "11":
-                        const targetStr = "心怀梦想，勇往直前";
-                        gameContent.innerHTML = `
-                            <h2>文字默写</h2>
-                            <p class="rule">记住下方文字，完整复刻输入</p>
-                            <p style="font-size:1.3rem;margin:15px 0;">${targetStr}</p>
-                            <input class="input" id="textInp" placeholder="在这里输入">
-                            <button class="btn btn-green" id="checkTextBtn">提交核对</button>
-                            <p class="tip-text normal" id="textTip">完整复制上方文字</p>
-                        `;
-                        document.getElementById("checkTextBtn").addEventListener('click', function() {
-                            const user = document.getElementById("textInp").value;
-                            const tip = document.getElementById("textTip");
-                            if(user === targetStr) {
-                                tip.innerText = "文字完全一致，默写成功！";
-                                tip.className = "tip-text success";
-                            } else {
-                                tip.innerText = "文字存在差异，请重新输入";
-                                tip.className = "tip-text fail";
-              
+    /* ========== Game 5: 骰子竞猜 ========== */
+    gameFns[5] = function() {
+        gc.innerHTML = '<h2>🎲 骰子竞猜</h2><p class="rule">两个骰子，猜总和偏大(>6)或偏小(<7)</p>';
+        var show = document.createElement("div");
+        show.className = "big-text";
+        show.textContent = "🎲🎲";
+        var t = tip("tip-info", "做出选择");
+        var sc = document.createElement("p");
+        sc.className = "score-row";
+        var wins = 0, total = 0;
+        sc.textContent = "胜率: 0/0";
+        gc.appendChild(show);
+        var btnB = document.createElement("button");
+        btnB.className = "btn btn-blue";
+        btnB.textContent = "猜偏大(>6)";
+        var btnS = document.createElement("button");
+        btnS.className = "btn btn-red";
+        btnS.textContent = "猜偏小(<7)";
+        function roll(type) {
+            var d1 = Math.floor(Math.random() * 6) + 1;
+            var d2 = Math.floor(Math.random() * 6) + 1;
+            var sum = d1 + d2;
+            show.textContent = "🎲" + d1 + " + 🎲" + d2 + " = " + sum;
+            total++;
+            if ((type === "big" && sum > 6) || (type === "small" && sum < 7)) {
+                wins++;
+                t.className = "tip tip-ok"; t.textContent = "猜对了！总和: " + sum;
+            } else {
+                t.className = "tip tip-err"; t.textContent = "猜错了！总和: " + sum;
+            }
+            sc.textContent = "胜率: " + wins + "/" + total;
+        }
+        btnB.addEventListener("click", function() { roll("big"); });
+        btnS.addEventListener("click", function() { roll("small"); });
+        gc.appendChild(btnB);
+        gc.appendChild(btnS);
+        gc.appendChild(t);
+        gc.appendChild(sc);
+    };
+
+    /* ========== Game 6: 水果老虎机 ========== */
+    gameFns[6] = function() {
+        gc.innerHTML = '<h2>🎰 水果老虎机</h2><p class="rule">三个图案相同即中大奖</p>';
+        var show = document.createElement("div");
+        show.className = "big-text";
+        show.textContent = "🍎 🍊 🍌";
+        var t = tip("tip-info", "试试手气");
+        var sc = document.createElement("p");
+        sc.className = "score-row";
+        var wins = 0, total = 0;
+        sc.textContent = "中奖: 0/0";
+        gc.appendChild(show);
+        var btn = document.createElement("button");
+        btn.className = "btn btn-yellow";
+        btn.textContent = "🎰 开始";
+        var fruits = ["🍎","🍊","🍌","🍇","🍓","🍉","🍑"];
+        btn.addEventListener("click", function() {
+            btn.disabled = true;
+            var results = [];
+            var step = 0;
+            var rollTimer = addTimer(setInterval(function() {
+                var r = [];
+                for (var i = 0; i < 3; i++) r.push(fruits[Math.floor(Math.random() * fruits.length)]);
+                show.textContent = r.join(" ");
+                step++;
+                if (step >= 15) {
+                    clearInterval(rollTimer);
+                    total++;
+                    var a = r[0], b = r[1], c = r[2];
+                    if (a === b && b === c) {
+                        wins++;
+                        t.className = "tip tip-ok"; t.textContent = "🎉 大奖！三个" + a;
+                    } else if (a === b || b === c || a === c) {
+                        t.className = "tip tip-info"; t.textContent = "小奖，两个相同";
+                    } else {
+                        t.className = "tip tip-err"; t.textContent = "未中奖";
+                    }
+                    sc.textContent = "中奖: " + wins + "/" + total;
+                    btn.disabled = false;
+                }
+            }, 100));
+        });
+        gc.appendChild(btn);
+        gc.appendChild(t);
+        gc.appendChild(sc);
+    };
+
+    /* ========== Game 7: 词语接龙 ========== */
+    gameFns[7] = function() {
+        var last = "欢乐";
+        gc.innerHTML = '<h2>🔤 词语接龙</h2><p class="rule">用上一个词的最后一个字开头接新词</p>';
+        var tail = document.createElement("p");
+        tail.innerHTML = '当前尾字: <span style="font-size:1.3rem;color:var(--warning)">' + last.slice(-1) + '</span>';
+        var inp = document.createElement("input");
+        inp.className = "input";
+        inp.placeholder = "输入词语";
+        var btn = document.createElement("button");
+        btn.className = "btn btn-green";
+        btn.textContent = "提交";
+        var t = tip("tip-info", "开局: " + last);
+        var cnt = 0;
+        var sc = document.createElement("p");
+        sc.className = "score-row";
+        sc.textContent = "连续接龙: 0";
+        gc.appendChild(tail);
+        gc.appendChild(inp);
+        gc.appendChild(btn);
+        gc.appendChild(t);
+        gc.appendChild(sc);
+        btn.addEventListener("click", function() {
+            var w = inp.value.trim();
+            if (w.length < 2) { t.className = "tip tip-err"; t.textContent = "至少两个字"; return; }
+            if (w[0] === last.slice(-1)) {
+                cnt++;
+                last = w;
+                tail.innerHTML = '当前尾字: <span style="font-size:1.3rem;color:var(--warning)">' + last.slice(-1) + '</span>';
+                t.className = "tip tip-ok"; t.textContent = "接龙成功: " + w;
+                sc.textContent = "连续接龙: " + cnt;
+                inp.value = "";
+            } else {
+                t.className = "tip tip-err"; t.textContent = "首字「" + w[0] + "」≠尾字「" + last.slice(-1) + "」";
+            }
+        });
+        inp.addEventListener("keydown", function(e) { if (e.key === "Enter") btn.click(); });
+    };
+
+    /* ========== Game 8: 色彩辨识 ========== */
+    gameFns[8] = function() {
+        var colors = [
+            {n:"红色",c:"#e74c3c"}, {n:"蓝色",c:"#3498db"}, {n:"绿色",c:"#2ecc71"},
+            {n:"橙色",c:"#f39c12"}, {n:"紫色",c:"#9b59b6"}, {n:"粉色",c:"#fd79a8"},
+            {n:"青色",c:"#00cec9"}, {n:"黄色",c:"#fdcb6e"}
+        ];
+        var score = 0, round = 0;
+        function next() {
+            round++;
+            var correct = colors[Math.floor(Math.random() * colors.length)];
+            var opts = [correct];
+            while (opts.length < 4) {
+                var c = colors[Math.floor(Math.random() * colors.length)];
+                if (opts.indexOf(c) === -1) opts.push(c);
+            }
+            for (var i = opts.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var t2 = opts[i]; opts[i] = opts[j]; opts[j] = t2;
+            }
+            gc.innerHTML = '<h2>🎨 色彩辨识</h2><p class="rule">选择色块对应的名称</p>';
+            var box = document.createElement("div");
+            box.className = "color-box";
+            box.style.background = correct.c;
+            gc.appendChild(box);
+            var t = tip("tip-info", "第 " + round + " 题");
+            opts.forEach(function(o) {
+                var b = document.createElement("button");
+                b.className = "btn btn-blue";
+                b.textContent = o.n;
+                b.addEventListener("click", function() {
+                    if (o === correct) {
+                        score++;
+                        t.className = "tip tip-ok"; t.textContent = "✓ 正确！";
+                    } else {
+                        t.className = "tip tip-err"; t.textContent = "✗ 答案: " + correct.n;
+                    }
+                    t.textContent += "  得分: " + score + "/" + round;
+                    setTimeout(next, 1200);
+                });
+                gc.appendChild(b);
+            });
+            gc.appendChild(t);
+        }
+        next();
+    };
+
+    /* ========== Game 9: 密码破解 ========== */
+    gameFns[9] = function() {
+        var pwd = String(Math.floor(1000 + Math.random() * 9000));
+        var tries = 0;
+        gc.innerHTML = '<h2>🗝️ 密码破解</h2><p class="rule">尝试破解四位数字密码</p>';
+        var inp = document.createElement("input");
+        inp.className = "input";
+        inp.maxLength = 4;
+        inp.placeholder = "4位数字";
+        var btn = document.createElement("button");
+        btn.className = "btn btn-green";
+        btn.textContent = "尝试解锁";
+        var t = tip("tip-info", "开始破解");
+        gc.appendChild(inp);
+        gc.appendChild(btn);
+        gc.appendChild(t);
+        var history = document.createElement("div");
+        history.style.cssText = "margin-top:12px;font-size:0.85rem;opacity:0.7;max-height:120px;overflow-y:auto;";
+        gc.appendChild(history);
+        btn.addEventListener("click", function() {
+            var v = inp.value;
+            if (v.length !== 4 || isNaN(v)) { t.className = "tip tip-err"; t.textContent = "输入4位数字"; return; }
+            tries++;
+            var feedback = "";
+            for (var i = 0; i < 4; i++) {
+                if (v[i] === pwd[i]) feedback += "🟢";
+                else if (pwd.indexOf(v[i]) !== -1) feedback += "🟡";
+                else feedback += "⚫";
+            }
+            history.innerHTML = '<div>' + v + ' ' + feedback + '</div>' + history.innerHTML;
+            if (v === pwd) {
+                t.className = "tip tip-ok"; t.textContent = "🔓 解锁成功！用了 " + tries + " 次";
+                btn.disabled = true;
+            } else {
+                t.className = "tip tip-err"; t.textContent = "🔒 密码错误";
+            }
+        });
+        inp.addEventListener("keydown", function(e) { if (e.key === "Enter") btn.click(); });
+    };
+
+    /* ========== Game 10: 表情记忆 ========== */
+    gameFns[10] = function() {
+        gc.innerHTML = '<h2>😃 表情记忆</h2><p class="rule">翻开卡牌，匹配相同表情</p>';
+        var emojis = ["😎","🥳","😆","🤩","😍","🥳","😎","😆"];
+        for (var i = emojis.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var t2 = emojis[i]; emojis[i] = emojis[j]; emojis[j] = t2;
+        }
+        var wrap = document.createElement("div");
+        wrap.className = "card-grid";
+        var first = null, locked = false, matched = 0, steps = 0;
+        emojis.forEach(function(ch, idx) {
+            var c = document.createElement("div");
+            c.className = "mem-card";
+            c.textContent = "?";
+            c.addEventListener("click", function() {
+                if (locked || this.classList.contains("flipped") || this.classList.contains("matched")) return;
+                this.classList.add("flipped");
+                this.textContent = ch;
+                if (!first) {
+                    first = this;
+                } else {
+                    steps++;
+                    locked = true;
+                    if (first.textContent === ch && first !== this) {
+                        first.classList.add("matched");
+                        this.classList.add("matched");
+                        matched++;
+                        locked = false;
+                        first = null;
+                        if (matched === 4) {
+                            gc.appendChild(tip("tip-ok", "全部配对！步数: " + steps));
+                        }
+                    } else {
+                        var f = first, s = this;
+                        addTimer(setTimeout(function() {
+                            f.classList.remove("flipped"); f.textContent = "?";
+                            s.classList.remove("flipped"); s.textContent = "?";
+                            locked = false; first = null;
+                        }, 700));
+                    }
+                }
+            });
+            wrap.appendChild(c);
+        });
+        gc.appendChild(wrap);
+        var sc = document.createElement("p");
+        sc.className = "score-row";
+        sc.textContent = "步数: 0";
+        gc.appendChild(sc);
+        wrap.addEventListener("click", function() { sc.textContent = "步数: " + steps; });
+    };
+
+    /* ========== Game 11: 文字默写 ========== */
+    gameFns[11] = function() {
+        var phrases = [
+            "心怀梦想，勇往直前",
+            "不积跬步，无以至千里",
+            "千里之行，始于足下",
+            "学而时习之，不亦说乎",
+            "温故而知新，可以为师矣"
+        ];
+        var idx = 0;
+        function next() {
+            if (idx >= phrases.length) {
+                gc.innerHTML = '<h2>✍️ 文字默写</h2><p class="rule">全部完成！</p>';
+                gc.appendChild(tip("tip-ok", "恭喜完成所有默写！"));
+                return;
+            }
+            var target = phrases[idx];
+            gc.innerHTML = '<h2>✍️ 文字默写</h2><p class="rule">记住文字，完整输入</p><p style="font-size:1.2rem;margin:12px 0;">' + target + '</p>';
+            var hideBtn = document.createElement("button");
+            hideBtn.className = "btn btn-yellow";
+            hideBtn.textContent = "隐藏文字";
+            var hidden = false;
+            hideBtn.addEventListener("click", function() {
+                hidden = !hidden;
+                var p = gc.querySelector("p[style]");
+                if (p) p.style.visibility = hidden ? "hidden" : "visible";
+                hideBtn.textContent = hidden ? "显示文字" : "隐藏文字";
+            });
+            var inp = document.createElement("input");
+            inp.className = "input";
+            inp.style.width = "90%";
+            inp.style.maxWidth = "400px";
+            inp.placeholder = "在这里输入";
+            var btn = document.createElement("button");
+            btn.className = "btn btn-green";
+            btn.textContent = "提交";
+            var t = tip("tip-info", "第 " + (idx + 1) + "/" + phrases.length + " 题");
+            gc.appendChild(hideBtn);
+            gc.appendChild(inp);
+            gc.appendChild(btn);
+            gc.appendChild(t);
+            btn.addEventListener("click", function() {
+                if (inp.value === target) {
+                    idx++;
+                    t.className = "tip tip-ok"; t.textContent = "✓ 正确！";
+                    setTimeout(next, 1000);
+                } else {
+                    t.className = "tip tip-err"; t.textContent = "✗ 不一致，请重试";
+                }
+            });
+            inp.addEventListener("keydown", function(e) { if (e.key === "Enter") btn.click(); });
+        }
+        next();
+    };
+
+    /* ========== Game 12: 限时速算 ========== */
+    gameFns[12] = function() {
+        gc.innerHTML = '<h2>🧮 限时速算</h2><p class="rule">10秒内答对越多越好</p>';
+        var score = 0, timeLeft = 10, running = false;
+        var t = tip("tip-info", "点击开始");
+        var sc = document.createElement("p");
+        sc.className = "score-row";
+        sc.textContent = "得分: 0";
+        var timerEl = document.createElement("p");
+        timerEl.className = "score-row";
+        timerEl.textContent = "剩余: 10s";
+        var qEl = document.createElement("div");
+        qEl.className = "big-text";
+        qEl.textContent = "";
+        var inp = document.createElement("input");
+        inp.className = "input";
+        inp.type = "number";
+        inp.placeholder = "答案";
+        var btn = document.createElement("button");
+        btn.className = "btn btn-green";
+        btn.textContent = "提交";
+        gc.appendChild(timerEl);
+        gc.appendChild(qEl);
+        gc.appendChild(inp);
+        gc.appendChild(btn);
+        gc.appendChild(sc);
+        gc.appendChild(t);
+
+        var a, b, op, answer;
+        function genQ() {
+            op = Math.random() < 0.5 ? "+" : "-";
+            if (op === "+") {
+                a = Math.floor(Math.random() * 50) + 1;
+                b = Math.floor(Math.random() * 50) + 1;
+            } else {
+                a = Math.floor(Math.random() * 50) + 20;
+                b = Math.floor(Math.random() * a);
+            }
+            answer = op === "+" ? a + b : a - b;
+            qEl.textContent = a + " " + op + " " + b + " = ?";
+            inp.value = "";
+            inp.focus();
+        }
+
+        var startBtn = document.createElement("button");
+        startBtn.className = "btn btn-yellow";
+        startBtn.textContent = "⏱️ 开始";
+        startBtn.addEventListener("click", function() {
+            if (running) return;
+            running = true;
+            score = 0;
+            timeLeft = 10;
+            startBtn.style.display = "none";
+            genQ();
+            var tick = addTimer(setInterval(function() {
+                timeLeft--;
+                timerEl.textContent = "剩余: " + timeLeft + "s";
+                if (timeLeft <= 0) {
+                    clearInterval(tick);
+                    running = false;
+                    t.className = "tip tip-ok";
+                    t.textContent = "时间到！得分: " + score;
+                    startBtn.style.display = "";
+                    qEl.textContent = "";
+                }
+            }, 1000));
+        });
+        gc.appendChild(startBtn);
+
+        function check() {
+            if (!running) return;
+            if (parseInt(inp.value, 10) === answer) {
+                score++;
+                sc.textContent = "得分: " + score;
+                genQ();
+            }
+        }
+        btn.addEventListener("click", check);
+        inp.addEventListener("keydown", function(e) { if (e.key === "Enter") check(); });
+    };
+
+    /* ========== Game 13: 硬币博弈 ========== */
+    gameFns[13] = function() {
+        gc.innerHTML = '<h2>🪙 硬币博弈</h2><p class="rule">猜硬币正反面，连续猜对越多越好</p>';
+        var show = document.createElement("div");
+        show.className = "big-text";
+        show.textContent = "🪙 ?";
+        var t = tip("tip-info", "选择正或反");
+        var streak = 0, best = 0, total = 0;
+        var sc = document.createElement("p");
+        sc.className = "score-row";
+        sc.textContent = "连续: 0 | 最佳: 0";
+        gc.appendChild(show);
+        var btnH = document.createElement("button");
+        btnH.className = "btn btn-yellow";
+        btnH.textContent = "🪙 正面";
+        var btnT = document.createElement("button");
+        btnT.className = "btn btn-blue";
+        btnT.textContent = "🔄 反面";
+        function flip(choice) {
+            total++;
+            var result = Math.random() < 0.5 ? "heads" : "tails";
+            show.textContent = result === "heads" ? "🪙 正面" : "🔄 反面";
+            if ((choice === "heads" && result === "heads") || (choice === "tails" && result === "tails")) {
+                streak++;
+                if (streak > best) best = streak;
+                t.className = "tip tip-ok";
+                t.textContent = "✓ 猜对！连续: " + streak;
+            } else {
+                streak = 0;
+                t.className = "tip tip-err";
+                t.textContent = "✗ 猜错了";
+            }
+            sc.textContent = "连续: " + streak + " | 最佳: " + best;
+        }
+        btnH.addEventListener("click", function() { flip("heads"); });
+        btnT.addEventListener("click", function() { flip("tails"); });
+        gc.appendChild(btnH);
+        gc.appendChild(btnT);
+        gc.appendChild(t);
+        gc.appendChild(sc);
+    };
+
+    /* ========== Game 14: 数字大小挑战 ========== */
+    gameFns[14] = function() {
+        gc.innerHTML = '<h2>📊 数字大小挑战</h2><p class="rule">判断左右两个数字哪个大</p>';
+        var score = 0, round = 0, combo = 0;
+        var left, right;
+        function next() {
+            round++;
+            left = Math.floor(Math.random() * 100);
+            right = Math.floor(Math.random() * 100);
+            while (right === left) right = Math.floor(Math.random() * 100);
+            gc.innerHTML = '<h2>📊 数字大小挑战</h2><p class="rule">判断左右两个数字哪个大</p>';
+            var numWrap = document.createElement("div");
+            numWrap.style.cssText = "display:flex;justify-content:center;align-items:center;gap:20px;margin:20px 0;";
+            var lEl = document.createElement("div");
+            lEl.className = "big-text";
+            lEl.textContent = left;
+            var vsEl = document.createElement("div");
+            vsEl.style.cssText = "font-size:1.2rem;opacity:0.6;";
+            vsEl.textContent = "VS";
+            var rEl = document.createElement("div");
+            rEl.className = "big-text";
+            rEl.textContent = right;
+            numWrap.appendChild(lEl);
+            numWrap.appendChild(vsEl);
+            numWrap.appendChild(rEl);
+            gc.appendChild(numWrap);
+            var btnL = document.createElement("button");
+            btnL.className = "btn btn-red";
+            btnL.textContent = "左边大 (<)";
+            var btnE = document.createElement("button");
+            btnE.className = "btn btn-yellow";
+            btnE.textContent = "一样大 (=)";
+            var btnR = document.createElement("button");
+            btnR.className = "btn btn-blue";
+            btnR.textContent = "(>) 右边大";
+            var t = tip("tip-info", "第 " + round + " 题");
+            var sc = document.createElement("p");
+            sc.className = "score-row";
+            sc.textContent = "得分: " + score + " | 连击: " + combo;
+            function check(ans) {
+                var correct = left > right ? "left" : left < right ? "right" : "equal";
+                if (ans === correct) {
+                    combo++;
+                    score += combo;
+                    t.className = "tip tip-ok"; t.textContent = "✓ 正确！连击 x" + combo;
+                } else {
+                    combo = 0;
+                    t.className = "tip tip-err"; t.textContent = "✗ 错误";
+                }
+                sc.textContent = "得分: " + score + " | 连击: " + combo;
+                setTimeout(next, 1000);
+            }
+            btnL.addEventListener("click", function() { check("left"); });
+            btnE.addEventListener("click", function() { check("equal"); });
+            btnR.addEventListener("click", function() { check("right"); });
+            gc.appendChild(btnL);
+            gc.appendChild(btnE);
+            gc.appendChild(btnR);
+            gc.appendChild(t);
+            gc.appendChild(sc);
+        }
+        next();
+    };
+
+    /* ========== Game 15: 随机抽签 ========== */
+    gameFns[15] = function() {
+        gc.innerHTML = '<h2>🎫 随机抽签</h2><p class="rule">输入名单，随机抽取幸运儿</p>';
+        var ta = document.createElement("textarea");
+        ta.className = "input";
+        ta.style.cssText = "width:90%;max-width:400px;height:120px;resize:vertical;";
+        ta.placeholder = "每行一个名字\n例如:\n张三\n李四\n王五";
+        ta.value = "张三\n李四\n王五\n赵六\n孙七\n周八";
+        var btn = document.createElement("button");
+        btn.className = "btn btn-green";
+        btn.textContent = "🎫 抽签";
+        var result = document.createElement("div");
+        result.className = "big-text";
+        result.textContent = "";
+        var t = tip("tip-info", "点击抽签");
+        gc.appendChild(ta);
+        gc.appendChild(btn);
+        gc.appendChild(result);
+        gc.appendChild(t);
+        btn.addEventListener("click", function() {
+            var names = ta.value.split("\n").map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
+            if (names.length < 2) { t.className = "tip tip-err"; t.textContent = "至少输入2个名字"; return; }
+            btn.disabled = true;
+            var step = 0;
+            var roller = addTimer(setInterval(function() {
+                result.textContent = names[Math.floor(Math.random() * names.length)];
+                step++;
+                if (step >= 20) {
+                    clearInterval(roller);
+                    var winner = names[Math.floor(Math.random() * names.length)];
+                    result.textContent = "🎊 " + winner;
+                    t.className = "tip tip-ok"; t.textContent = "中签者: " + winner;
+                    btn.disabled = false;
+                }
+            }, 80));
+        });
+    };
+
+    /* ========== Game 16: 手速挑战 ========== */
+    gameFns[16] = function() {
+        gc.innerHTML = '<h2>🏃 手速挑战</h2><p class="rule">5秒内疯狂点击，挑战手速极限</p>';
+        var count = 0, running = false, timeLeft = 5;
+        var counter = document.createElement("div");
+        counter.className = "big-text";
+        counter.textContent = "0";
+        var t = tip("tip-info", "点击开始");
+        var timerEl = document.createElement("p");
+        timerEl.className = "score-row";
+        timerEl.textContent = "";
+        var tapBtn = document.createElement("button");
+        tapBtn.className = "btn btn-red";
+        tapBtn.textContent = "👆 点我！";
+        tapBtn.style.cssText = "font-size:1.3rem;padding:20px 60px;";
+        tapBtn.disabled = true;
+        var startBtn = document.createElement("button");
+        startBtn.className = "btn btn-yellow";
+        startBtn.textContent = "⏱️ 开始挑战";
+        gc.appendChild(timerEl);
+        gc.appendChild(counter);
+        gc.appendChild(tapBtn);
+        gc.appendChild(startBtn);
+        gc.appendChild(t);
+        startBtn.addEventListener("click", function() {
+            if (running) return;
+            running = true;
+            count = 0;
+            timeLeft = 5;
+            counter.textContent = "0";
+            tapBtn.disabled = false;
+            startBtn.style.display = "none";
+            var tick = addTimer(setInterval(function() {
+                timeLeft--;
+                timerEl.textContent = "剩余: " + timeLeft + "s";
+                if (timeLeft <= 0) {
+                    clearInterval(tick);
+                    running = false;
+                    tapBtn.disabled = true;
+                    startBtn.style.display = "";
+                    t.className = "tip tip-ok";
+                    t.textContent = "手速: " + count + " 次/5秒 (" + Math.round(count / 5) + " CPS)";
+                }
+            }, 1000));
+        });
+        tapBtn.addEventListener("click", function() {
+            if (!running) return;
+            count++;
+            counter.textContent = count;
+        });
+    };
+
+    /* ========== Game 17: 精准计时 ========== */
+    gameFns[17] = function() {
+        gc.innerHTML = '<h2>⏱️ 精准计时</h2><p class="rule">点击开始，恰好10秒时停止</p>';
+        var running = false, startTime = 0;
+        var show = document.createElement("div");
+        show.className = "big-text";
+        show.textContent = "0.000s";
+        var t = tip("tip-info", "点击开始");
+        var best = Infinity;
+        var sc = document.createElement("p");
+        sc.className = "score-row";
+        sc.textContent = "最佳偏差: --";
+        var btn = document.createElement("button");
+        btn.className = "btn btn-green";
+        btn.textContent = "▶ 开始";
+        gc.appendChild(show);
+        gc.appendChild(btn);
+        gc.appendChild(t);
+        gc.appendChild(sc);
+        var updateId = null;
+        btn.addEventListener("click", function() {
+            if (!running) {
+                running = true;
+                startTime = Date.now();
+                btn.textContent = "⏹ 停止";
+                btn.className = "btn btn-red";
+                t.className = "tip tip-info";
+                t.textContent = "计时中...";
+                updateId = addTimer(setInterval(function() {
+                    var elapsed = (Date.now() - startTime) / 1000;
+                    show.textContent = elapsed.toFixed(3) + "s";
+                }, 30));
+            } else {
+                running = false;
+                clearInterval(updateId);
+                var elapsed = (Date.now() - startTime) / 1000;
+                var diff = Math.abs(elapsed - 10);
+                show.textContent = elapsed.toFixed(3) + "s";
+                btn.textContent = "▶ 再来";
+                btn.className = "btn btn-green";
+                if (diff < 0.1) {
+                    t.className = "tip tip-ok"; t.textContent = "🎯 完美！偏差: " + diff.toFixed(3) + "s";
+                } else if (diff < 0.5) {
+                    t.className = "tip tip-info"; t.textContent = "不错！偏差: " + diff.toFixed(3) + "s";
+                } else {
+                    t.className = "tip tip-err"; t.textContent = "偏差: " + diff.toFixed(3) + "s，加油！";
+                }
+                if (diff < best) { best = diff; }
+                sc.textContent = "最佳偏差: " + best.toFixed(3) + "s";
+            }
+        });
+    };
+
+    /* ========== Game 18: 综合闯关 ========== */
+    gameFns[18] = function() {
+        var level = 0, score = 0;
+        var challenges = [
+            { q: "2 + 3 = ?", a: "5" },
+            { q: "哪个是偶数？", opts: ["3","7","4","9"], a: "4" },
+            { q: "一年有几个月？", opts: ["10","11","12","13"], a: "12" },
+            { q: "10 - 4 = ?", a: "6" },
+            { q: "哪个最大？", opts: ["0.5","0.3","0.8","0.1"], a: "0.8" },
+            { q: "3 × 4 = ?", a: "12" },
+            { q: "太阳从哪个方向升起？", opts: ["东方","西方","南方","北方"], a: "东方" },
+            { q: "100 ÷ 5 = ?", a: "20" },
+            { q: "哪个是质数？", opts: ["4","6","7","8"], a: "7" },
+            { q: "5 + 8 = ?", a: "13" }
+        ];
+        function nextLevel() {
+            if (level >= challenges.length) {
+                gc.innerHTML = '<h2>🏆 综合闯关</h2>';
+                gc.appendChild(tip("tip-ok", "恭喜通关！总分: " + score + "/" + challenges.length));
+                return;
+            }
+            var ch = challenges[level];
+            gc.innerHTML = '<h2>🏆 综合闯关</h2><p class="rule">第 ' + (level + 1) + '/' + challenges.length + ' 关 | 得分: ' + score + '</p>';
+            var progress = document.createElement("div");
+            progress.className = "progress-bar";
+            var fill = document.createElement("div");
+            fill.className = "progress-fill";
+            fill.style.width = (level / challenges.length * 100) + "%";
+            progress.appendChild(fill);
+            gc.appendChild(progress);
+            var qEl = document.createElement("div");
+            qEl.className = "big-text";
+            qEl.style.fontSize = "1.5rem";
+            qEl.textContent = ch.q;
+            gc.appendChild(qEl);
+            var t = tip("tip-info", "选择答案");
+            if (ch.opts) {
+                ch.opts.forEach(function(o) {
+                    var b = document.createElement("button");
+                    b.className = "btn btn-blue";
+                    b.textContent = o;
+                    b.addEventListener("click", function() {
+                        if (o === ch.a) { score++; t.className = "tip tip-ok"; t.textContent = "✓ 正确！"; }
+                        else { t.className = "tip tip-err"; t.textContent = "✗ 答案: " + ch.a; }
+                        level++;
+                        setTimeout(nextLevel, 1000);
+                    });
+                    gc.appendChild(b);
+                });
+            } else {
+                var inp = document.createElement("input");
+                inp.className = "input";
+                inp.type = "number";
+                inp.placeholder = "输入答案";
+                var btn = document.createElement("button");
+                btn.className = "btn btn-green";
+                btn.textContent = "提交";
+                btn.addEventListener("click", function() {
+                    if (inp.value === ch.a) { score++; t.className = "tip tip-ok"; t.textContent = "✓ 正确！"; }
+                    else { t.className = "tip tip-err"; t.textContent = "✗ 答案: " + ch.a; }
+                    level++;
+                    setTimeout(nextLevel, 1000);
+                });
+                inp.addEventListener("keydown", function(e) { if (e.key === "Enter") btn.click(); });
+                gc.appendChild(inp);
+                gc.appendChild(btn);
+            }
+            gc.appendChild(t);
+        }
+        nextLevel();
+    };
+
+    /* ========== Game 19: 队伍分组 ========== */
+    gameFns[19] = function() {
+        gc.innerHTML = '<h2>👥 队伍分组</h2><p class="rule">输入名单和组数，随机分配</p>';
+        var ta = document.createElement("textarea");
+        ta.className = "input";
+        ta.style.cssText = "width:90%;max-width:400px;height:100px;resize:vertical;";
+        ta.placeholder = "每行一个名字";
+        ta.value = "张三\n李四\n王五\n赵六\n孙七\n周八\n吴九\n郑十";
+        var grpInp = document.createElement("input");
+        grpInp.className = "input";
+        grpInp.type = "number";
+        grpInp.min = "2";
+        grpInp.max = "10";
+        grpInp.placeholder = "组数";
+        grpInp.value = "2";
+        var btn = document.createElement("button");
+        btn.className = "btn btn-green";
+        btn.textContent = "👥 分组";
+        var result = document.createElement("div");
+        result.style.cssText = "text-align:left;max-width:500px;margin:16px auto;font-size:0.95rem;";
+        gc.appendChild(ta);
+        gc.appendChild(grpInp);
+        gc.appendChild(btn);
+        gc.appendChild(result);
+        btn.addEventListener("click", function() {
+            var names = ta.value.split("\n").map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
+            var g = parseInt(grpInp.value, 10);
+            if (names.length < g) { result.innerHTML = '<p class="tip tip-err">人数不够分组</p>'; return; }
+            for (var i = names.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var t2 = names[i]; names[i] = names[j]; names[j] = t2;
+            }
+            var groups = [];
+            for (var k = 0; k < g; k++) groups.push([]);
+            names.forEach(function(n, idx) { groups[idx % g].push(n); });
+            var html = "";
+            var colors = ["#e74c3c","#3498db","#2ecc71","#f39c12","#9b59b6","#1abc9c","#e67e22","#34495e","#e84393","#00b894"];
+            groups.forEach(function(gr, i) {
+                html += '<div style="margin:10px 0;padding:10px;border-left:4px solid ' + colors[i % colors.length] + ';background:rgba(255,255,255,0.08);border-radius:0 8px 8px 0;">';
+                html += '<b style="color:' + colors[i % colors.length] + '">第' + (i + 1) + '组</b>: ';
+                html += gr.join(", ");
+                html += '</div>';
+            });
+            result.innerHTML = html;
+        });
+    };
+
+    /* ========== Game 20: 攻防对战 ========== */
+    gameFns[20] = function() {
+        var pH = 100, eH = 100, pCombo = 0;
+        gc.innerHTML = '<h2>🛡️ 攻防对战</h2><p class="rule">选择招式，克制对方！<br>✊克✌️ 克🖐️ 克✊ | 防御减半伤害</p>';
+        var show = document.createElement("div");
+        show.className = "big-text";
+        show.textContent = "⚔️";
+        var playerHP = document.createElement("div");
+        playerHP.innerHTML = '<div style="font-size:0.85rem;margin-bottom:2px;">🧑 你</div><div class="hp-bar"><div class="hp-fill hp-player" id="php" style="width:100%"></div></div>';
+        var enemyHP = document.createElement("div");
+        enemyHP.innerHTML = '<div style="font-size:0.85rem;margin-bottom:2px;">👹 对手</div><div class="hp-bar"><div class="hp-fill hp-enemy" id="ehp" style="width:100%"></div></div>';
+        var t = tip("tip-info", "选择你的招式");
+        var sc = document.createElement("p");
+        sc.className = "score-row";
+        sc.textContent = "连击: 0";
+        gc.appendChild(show);
+        gc.appendChild(playerHP);
+        gc.appendChild(enemyHP);
+
+        var moves = [
+            { name: "✊ 石头", val: 0, cls: "btn-red" },
+            { name: "✌️ 剪刀", val: 1, cls: "btn-yellow" },
+            { name: "🖐️ 布", val: 2, cls: "btn-blue" },
+            { name: "🛡️ 防御", val: -1, cls: "btn-purple" }
+        ];
+
+        moves.forEach(function(m) {
+            var b = document.createElement("button");
+            b.className = "btn " + m.cls;
+            b.textContent = m.name;
+            b.addEventListener("click", function() {
+                if (pH <= 0 || eH <= 0) return;
+                var pc = Math.floor(Math.random() * 3);
+                var pDmg = 0, eDmg = 0;
+                if (m.val === -1) {
+                    eDmg = 8;
+                    show.textContent = "🛡️防御 → -8";
+                } else {
+                    if (m.val === pc) {
+                        pDmg = 15; eDmg = 15;
+                        show.textContent = "⚔️ 平局互伤";
+                    } else if ((m.val + 1) % 3 === pc) {
+                        pCombo++;
+                        eDmg = 20 + pCombo * 2;
+                        show.textContent = "💥 你克对手！";
+                    } else {
+                        pCombo = 0;
+                        pDmg = 20;
+                        show.textContent = "😣 被克了";
+                    }
+                }
+                pH = Math.max(0, pH - pDmg);
+                eH = Math.max(0, eH - eDmg);
+                document.getElementById("php").style.width = pH + "%";
+                document.getElementById("ehp").style.width = eH + "%";
+                sc.textContent = "连击: " + pCombo;
+
+                if (eH <= 0) {
+                    t.className = "tip tip-ok"; t.textContent = "🎉 你赢了！";
+                } else if (pH <= 0) {
+                    t.className = "tip tip-err"; t.textContent = "😢 你输了";
+                } else {
+                    t.className = "tip tip-info";
+                    t.textContent = "你: " + pH + "HP | 对手: " + eH + "HP";
+                }
+            });
+            gc.appendChild(b);
+        });
+        gc.appendChild(t);
+        gc.appendChild(sc);
+    };
+
+})();
+</script>
+</body>
+</html>
