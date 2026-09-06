@@ -1,3 +1,10 @@
+<!-- 
+  多游戏合集 (tiny-game)
+  一个基于HTML5的游戏
+  作者: wangzi5151
+  版本: 1.0
+  许可证: MIT License
+-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -997,8 +1004,17 @@
         var ta = document.createElement("textarea");
         ta.className = "input";
         ta.style.cssText = "width:90%;max-width:400px;height:120px;resize:vertical;";
-        ta.placeholder = "每行一个名字\n例如:\n张三\n李四\n王五";
-        ta.value = "张三\n李四\n王五\n赵六\n孙七\n周八";
+        ta.placeholder = "每行一个名字
+例如:
+张三
+李四
+王五";
+        ta.value = "张三
+李四
+王五
+赵六
+孙七
+周八";
         var btn = document.createElement("button");
         btn.className = "btn btn-green";
         btn.textContent = "🎫 抽签";
@@ -1011,7 +1027,8 @@
         gc.appendChild(result);
         gc.appendChild(t);
         btn.addEventListener("click", function() {
-            var names = ta.value.split("\n").map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
+            var names = ta.value.split("
+").map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
             if (names.length < 2) { t.className = "tip tip-err"; t.textContent = "至少输入2个名字"; return; }
             btn.disabled = true;
             var step = 0;
@@ -1213,7 +1230,14 @@
         ta.className = "input";
         ta.style.cssText = "width:90%;max-width:400px;height:100px;resize:vertical;";
         ta.placeholder = "每行一个名字";
-        ta.value = "张三\n李四\n王五\n赵六\n孙七\n周八\n吴九\n郑十";
+        ta.value = "张三
+李四
+王五
+赵六
+孙七
+周八
+吴九
+郑十";
         var grpInp = document.createElement("input");
         grpInp.className = "input";
         grpInp.type = "number";
@@ -1231,7 +1255,8 @@
         gc.appendChild(btn);
         gc.appendChild(result);
         btn.addEventListener("click", function() {
-            var names = ta.value.split("\n").map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
+            var names = ta.value.split("
+").map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
             var g = parseInt(grpInp.value, 10);
             if (names.length < g) { result.innerHTML = '<p class="tip tip-err">人数不够分组</p>'; return; }
             for (var i = names.length - 1; i > 0; i--) {
