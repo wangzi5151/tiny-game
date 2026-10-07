@@ -1,0 +1,139 @@
+<!-- 
+  打砖块游戏 (BreakoutGame)
+  一个基于HTML5的游戏
+  作者: wangzi5151
+  版本: 1.0
+  许可证: MIT License
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>打砖块</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC',sans-serif}
+body{background:#0a0a1a;display:flex;justify-content:center;align-items:center}
+#A{position:relative;width:100vw;height:100vh;max-width:460px;max-height:780px;display:flex;flex-direction:column;background:#0a0a1a}
+.hd{display:flex;justify-content:space-between;padding:14px 18px;z-index:10}
+.pn{background:rgba(22,33,62,.8);border-radius:8px;padding:6px 14px;text-align:center}
+.pn .l{font-size:9px;color:#534b62;text-transform:uppercase}
+.pn .v{font-size:20px;font-weight:700;color:#ff6b6b}
+.cw{flex:1;display:flex;justify-content:center;align-items:center}
+canvas{border-radius:10px;background:#0f1629}
+.lv{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:10}
+.li{width:13px;height:13px;border-radius:50%;background:#ff6b6b;box-shadow:0 0 6px rgba(255,107,107,.4)}
+.li.lost{background:#333;box-shadow:none}
+.ov{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:center;align-items:center;background:rgba(10,10,26,.9);z-index:20}
+.ov.show{display:flex}
+.ov h2{font-size:30px;color:#fff;margin-bottom:6px}
+.ov p{color:rgba(255,255,255,.45);margin-bottom:22px;font-size:14px}
+.ov .sc{font-size:44px;color:#ff6b6b;font-weight:800;margin-bottom:4px}
+.ov button{padding:12px 46px;font-size:17px;color:#fff;background:linear-gradient(135deg,#ff6b6b,#ee5a24);border:none;border-radius:28px;cursor:pointer;font-weight:700;transition:transform .1s}
+.ov button:active{transform:scale(.95)}
+</style>
+</head>
+<body>
+<div id="A">
+<div class="hd">
+<div class="pn"><div class="l">分数</div><div class="v" id="sc">0</div></div>
+<div class="pn"><div class="l">关卡</div><div class="v" id="lv">1</div></div>
+<div class="pn"><div class="l">最高</div><div class="v" id="bst">0</div></div>
+</div>
+<div class="cw"><canvas id="c"></canvas></div>
+<div class="lv" id="lvE"></div>
+<div class="ov" id="st"><h2>🧱 打砖块</h2><p>BREAKOUT</p><button id="sB">开始游戏</button></div>
+<div class="ov" id="wO"><h2>🎉 过关!</h2><div class="sc" id="wS">0</div><p id="wM"></p><button id="wB">下一关</button></div>
+<div class="ov" id="lO"><h2>💔 游戏结束</h2><div class="sc" id="lS">0</div><p>最高分: <span id="lB2">0</span></p><button id="lB">再来一次</button></div>
+</div>
+<script>
+(function(){
+var cv=document.getElementById("c"),cx=cv.getContext("2d"),app=document.getElementById("A");
+var W,H,paddle,ball,bricks,score,level,lives,best=+localStorage.getItem("bkB")||0,combo;
+var BR=6,BC=8,BH=22,PAD=5,TOP=45;
+var COLS=["#ff6b6b","#ff9f43","#feca57","#48dbfb","#ff6b9d","#c56cf0","#7bed9f","#00d2d3"];
+var particles=[];
+var AC;function initA(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume()}
+function tone(f,d,t,v){if(!AC)return;var o=AC.createOscillator(),g=AC.createGain();o.type=t||"sine";o.frequency.value=f;g.gain.setValueAtTime(v||.08,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}
+function sfxBounce(){tone(300,.04,"sine",.06)}
+function sfxBreak(n){tone(500+n*60,.08,"sine",.08)}
+function sfxWall(){tone(200,.03,"sine",.04)}
+function sfxDie(){tone(150,.25,"sawtooth",.06)}
+function sfxWin(){[523,659,784].forEach(function(f,i){setTimeout(function(){tone(f,.15,"sine",.08)},i*100)})}
+
+function resize(){var r=app.getBoundingClientRect();W=Math.min(r.width-16,440);H=Math.min(r.height-100,650);cv.width=W;cv.height=H;cv.style.width=W+"px";cv.style.height=H+"px"}
+function init(){
+  initA();resize();score=0;lives=3;level=1;combo=0;particles=[];
+  document.getElementById("sc").textContent="0";document.getElementById("lv").textContent="1";
+  mkL();updL();state="play";
+  ["st","wO","lO"].forEach(function(id){document.getElementById(id).classList.remove("show")});
+}
+function mkL(){
+  var bw=(W-PAD*(BC+1))/BC;bricks=[];
+  for(var r=0;r<BR;r++)for(var c=0;c<BC;c++)bricks.push({x:PAD+c*(bw+PAD),y:TOP+r*(BH+PAD),w:bw,h:BH,col:COLS[r%COLS.length],alive:true,hp:level>3&&r<2?2:1});
+  paddle={x:W/2,y:H-26,w:76,h:10};ball={x:W/2,y:H-40,vx:2.5*(Math.random()>.5?1:-1),vy:-4,r:5,att:true};combo=0;
+}
+function updL(){var el=document.getElementById("lvE");el.innerHTML="";for(var i=0;i<3;i++){var d=document.createElement("div");d.className="li"+(i>=lives?" lost":"");el.appendChild(d)}}
+function addP(x,y,col,n){for(var i=0;i<n;i++)particles.push({x:x,y:y,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7,life:1,dec:.025+Math.random()*.02,sz:Math.random()*3+1,col:col})}
+
+function update(){
+  if(state!=="play")return;
+  if(ball.att){ball.x=paddle.x+paddle.w/2;ball.y=paddle.y-ball.r-1;return}
+  ball.x+=ball.vx;ball.y+=ball.vy;
+  if(ball.x-ball.r<0){ball.x=ball.r;ball.vx=Math.abs(ball.vx);sfxWall()}
+  if(ball.x+ball.r>W){ball.x=W-ball.r;ball.vx=-Math.abs(ball.vx);sfxWall()}
+  if(ball.y-ball.r<0){ball.y=ball.r;ball.vy=Math.abs(ball.vy);sfxWall()}
+  if(ball.y+ball.r>H){loseL();return}
+  if(ball.vy>0&&ball.y+ball.r>=paddle.y&&ball.x>=paddle.x&&ball.x<=paddle.x+paddle.w){
+    var hit=(ball.x-paddle.x)/paddle.w-.5;ball.vx=hit*7;ball.vy=-Math.abs(ball.vy);combo=0;sfxBounce();addP(ball.x,ball.y,"#48dbfb",4);
+  }
+  for(var i=0;i<bricks.length;i++){
+    var b=bricks[i];if(!b.alive)continue;
+    if(ball.x+ball.r>b.x&&ball.x-ball.r<b.x+b.w&&ball.y+ball.r>b.y&&ball.y-ball.r<b.y+b.h){
+      ball.vy=-ball.vy;b.hp--;
+      if(b.hp<=0){b.alive=false;combo++;score+=10*combo;sfxBreak(combo);addP(b.x+b.w/2,b.y+b.h/2,b.col,12);document.getElementById("sc").textContent=score}
+      break;
+    }
+  }
+  var allD=true;for(var i=0;i<bricks.length;i++)if(bricks[i].alive){allD=false;break}
+  if(allD){state="won";sfxWin();document.getElementById("wS").textContent=score;document.getElementById("wM").textContent="关卡 "+level+" 完成!";document.getElementById("wO").classList.add("show")}
+}
+function loseL(){
+  lives--;updL();
+  if(lives<=0){state="dead";sfxDie();if(score>best){best=score;localStorage.setItem("bkB",best)}document.getElementById("lS").textContent=score;document.getElementById("lB2").textContent=best;document.getElementById("lO").classList.add("show")}
+  else{ball.att=true;ball.vx=2.5*(Math.random()>.5?1:-1);ball.vy=-4}
+}
+
+function draw(){
+  cx.clearRect(0,0,W,H);
+  for(var i=0;i<bricks.length;i++){
+    var b=bricks[i];if(!b.alive)continue;
+    var g=cx.createLinearGradient(b.x,b.y,b.x,b.y+b.h);g.addColorStop(0,b.col);g.addColorStop(1,adj(b.col,-25));
+    cx.fillStyle=g;cx.beginPath();cx.roundRect(b.x,b.y,b.w,b.h,3);cx.fill();
+    cx.fillStyle="rgba(255,255,255,.1)";cx.fillRect(b.x+2,b.y+2,b.w-4,b.h/3);
+    if(b.hp>1){cx.fillStyle="#fff";cx.font="bold 11px sans-serif";cx.textAlign="center";cx.textBaseline="middle";cx.fillText(b.hp,b.x+b.w/2,b.y+b.h/2)}
+  }
+  var pg=cx.createLinearGradient(paddle.x,paddle.y,paddle.x,paddle.y+paddle.h);pg.addColorStop(0,"#fff");pg.addColorStop(1,"#ccc");
+  cx.fillStyle=pg;cx.beginPath();cx.roundRect(paddle.x,paddle.y,paddle.w,paddle.h,5);cx.fill();
+  cx.shadowColor="#ff6b6b";cx.shadowBlur=12;cx.fillStyle="#ff6b6b";cx.beginPath();cx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);cx.fill();cx.shadowBlur=0;
+  for(var i=0;i<particles.length;i++){var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.12;p.life-=p.dec;cx.globalAlpha=p.life;cx.fillStyle=p.col;cx.beginPath();cx.arc(p.x,p.y,p.sz,0,Math.PI*2);cx.fill()}
+  cx.globalAlpha=1;particles=particles.filter(function(p){return p.life>0});
+}
+function adj(h,a){var r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);r=Math.max(0,Math.min(255,r+a));g=Math.max(0,Math.min(255,g+a));b=Math.max(0,Math.min(255,b+a));return"#"+[r,g,b].map(function(v){return v.toString(16).padStart(2,"0")}).join("")}
+
+var lt=0;function loop(t){var dt=Math.min(t-lt,33);lt=t;update();draw();requestAnimationFrame(loop)}
+function mvP(x){var r=cv.getBoundingClientRect();paddle.x=Math.max(0,Math.min(W-paddle.w,((x-r.left)/r.width)*W-paddle.w/2))}
+cv.addEventListener("mousemove",function(e){mvP(e.clientX)});
+cv.addEventListener("touchmove",function(e){e.preventDefault();mvP(e.touches[0].clientX)},{passive:false});
+cv.addEventListener("click",function(){if(state==="play"&&ball.att){initA();ball.att=false}});
+cv.addEventListener("touchstart",function(e){e.preventDefault();if(state==="play"&&ball.att){initA();ball.att=false}},{passive:false});
+document.getElementById("sB").onclick=init;
+document.getElementById("wB").onclick=function(){document.getElementById("wO").classList.remove("show");level++;mkL();state="play"};
+document.getElementById("lB").onclick=init;
+document.getElementById("bst").textContent=best;
+resize();addEventListener("resize",resize);requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
