@@ -1,0 +1,137 @@
+<!-- 
+  扫雷游戏 (MinesweeperGame)
+  一个基于HTML5的游戏
+  作者: wangzi5151
+  版本: 1.0
+  许可证: MIT License
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>扫雷</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC',sans-serif}
+body{background:#1a1a2e;display:flex;justify-content:center;align-items:center}
+#A{display:flex;flex-direction:column;align-items:center;padding:14px;max-width:480px;width:100%}
+.hd{display:flex;justify-content:space-between;width:100%;margin-bottom:14px}
+.pn{background:#16213e;border-radius:8px;padding:8px 16px;text-align:center;min-width:72px}
+.pn .l{font-size:9px;color:#534b62;text-transform:uppercase}
+.pn .v{font-size:22px;font-weight:700;color:#e94560}
+.ds{display:flex;gap:8px;margin-bottom:14px;width:100%}
+.db{flex:1;padding:9px;font-size:12px;font-weight:600;color:#fff;background:#0f3460;border:2px solid transparent;border-radius:6px;cursor:pointer;text-align:center;transition:transform .08s}
+.db.on{border-color:#e94560;background:#1a1a4e}
+.db:active{transform:scale(.95)}
+.b{display:grid;gap:2px;background:#0f3460;padding:5px;border-radius:8px;width:100%}
+.c{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;border-radius:3px;cursor:pointer;transition:transform .08s,background .1s}
+.c.h{background:linear-gradient(145deg,#1e2d50,#16213e)}
+.c.h:active{transform:scale(.92)}
+.c.r{background:#0a0f1e}
+.c.m{background:#e94560!important;animation:ex .3s ease}
+.c.ex{background:#ff0040!important;box-shadow:0 0 12px rgba(255,0,64,.5)}
+@keyframes ex{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+.c.fl::after{content:"🚩";font-size:14px}
+.c1{color:#4fc3f7}.c2{color:#81c784}.c3{color:#e57373}.c4{color:#7e57c2}.c5{color:#ffb74d}.c6{color:#26c6da}.c7{color:#ec407a}.c8{color:#78909c}
+.ov{position:fixed;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:center;align-items:center;background:rgba(10,15,30,.88);z-index:50}
+.ov.show{display:flex}
+.ov h2{font-size:30px;color:#fff;margin-bottom:8px}
+.ov p{font-size:16px;color:rgba(255,255,255,.5);margin-bottom:22px}
+.ov button{padding:11px 38px;font-size:16px;color:#fff;background:#e94560;border:none;border-radius:22px;cursor:pointer;transition:transform .08s}
+.ov button:active{transform:scale(.95)}
+</style>
+</head>
+<body>
+<div id="A">
+<div class="hd">
+<div class="pn"><div class="l">💣 地雷</div><div class="v" id="mn">10</div></div>
+<div class="pn"><div class="l">⏱ 时间</div><div class="v" id="tm">0</div></div>
+<div class="pn"><div class="l">🚩 标记</div><div class="v" id="fl">0</div></div>
+</div>
+<div class="ds"><button class="db on" data-d="e">简单 9×9</button><button class="db" data-d="m">中级 16×16</button><button class="db" data-d="h">高级 16×30</button></div>
+<div class="b" id="bd"></div>
+</div>
+<div class="ov" id="win"><h2>🎉 你赢了!</h2><p id="wt"></p><button id="wB">再来一局</button></div>
+<div class="ov" id="lose"><h2>💥 踩雷了!</h2><p>再试一次?</p><button id="lB">重新开始</button></div>
+<script>
+(function(){
+var AC;function initA(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume()}
+function tone(f,d,t,v){if(!AC)return;var o=AC.createOscillator(),g=AC.createGain();o.type=t||"sine";o.frequency.value=f;g.gain.setValueAtTime(v||.08,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}
+function sfxClick(){tone(400,.04,"sine",.06)}
+function sfxFlag(){tone(500,.06,"sine",.06)}
+function sfxReveal(){tone(600,.04,"sine",.05)}
+function sfxBoom(){tone(100,.4,"sawtooth",.1);setTimeout(function(){tone(80,.3,"square",.06)},100)}
+function sfxWin(){[523,659,784,1047].forEach(function(f,i){setTimeout(function(){tone(f,.2,"sine",.1)},i*120)})}
+
+var DS={e:{r:9,c:9,m:10},m:{r:16,c:16,m:40},h:{r:16,c:30,m:99}};
+var diff="e",rows,cols,totalM,grid,rev,flg,over,first,intv,secs,flC;
+var bdEl=document.getElementById("bd"),mnEl=document.getElementById("mn"),tmEl=document.getElementById("tm"),flEl=document.getElementById("fl");
+
+function init(){
+  initA();var d=DS[diff];rows=d.r;cols=d.c;totalM=d.m;
+  grid=[];rev=[];flg=[];
+  for(var r=0;r<rows;r++){grid[r]=[];rev[r]=[];flg[r]=[];for(var c=0;c<cols;c++){grid[r][c]=0;rev[r][c]=false;flg[r][c]=false}}
+  over=false;first=true;secs=0;flC=0;clearInterval(intv);intv=null;
+  mnEl.textContent=totalM;tmEl.textContent="0";flEl.textContent="0";
+  document.getElementById("win").classList.remove("show");document.getElementById("lose").classList.remove("show");
+  render();
+}
+
+function placeM(sr,sc){
+  var placed=0;
+  while(placed<totalM){var r=Math.floor(Math.random()*rows),c=Math.floor(Math.random()*cols);if(grid[r][c]===-1)continue;if(Math.abs(r-sr)<=1&&Math.abs(c-sc)<=1)continue;grid[r][c]=-1;placed++}
+  for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
+    if(grid[r][c]===-1)continue;var n=0;
+    for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++){var nr=r+dr,nc=c+dc;if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&grid[nr][nc]===-1)n++}
+    grid[r][c]=n;
+  }
+}
+
+function reveal(r,c){
+  if(r<0||r>=rows||c<0||c>=cols||rev[r][c]||flg[r][c])return;
+  rev[r][c]=true;sfxReveal();
+  if(grid[r][c]===0)for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++)reveal(r+dr,c+dc);
+}
+
+function checkWin(){for(var r=0;r<rows;r++)for(var c=0;c<cols;c++)if(!rev[r][c])return false;return true}
+
+function startT(){if(intv)return;intv=setInterval(function(){secs++;tmEl.textContent=secs},1000)}
+
+function clickC(r,c,e){
+  e.preventDefault();if(over||flg[r][c]||rev[r][c])return;
+  if(first){first=false;placeM(r,c);startT()}
+  sfxClick();
+  if(grid[r][c]===-1){
+    over=true;clearInterval(intv);sfxBoom();
+    for(var rr=0;rr<rows;rr++)for(var cc=0;cc<cols;cc++)if(grid[rr][cc]===-1)rev[rr][cc]=true;
+    render();
+    var cells=bdEl.children;cells[r*cols+c].classList.add("ex");
+    setTimeout(function(){document.getElementById("lose").classList.add("show")},400);return;
+  }
+  reveal(r,c);render();
+  if(checkWin()){over=true;clearInterval(intv);sfxWin();document.getElementById("wt").textContent="用时 "+secs+" 秒";document.getElementById("win").classList.add("show")}
+}
+
+var longT=null;
+function startLong(r,c){longT=setTimeout(function(){if(!over&&!rev[r][c]){flg[r][c]=!flg[r][c];flC+=flg[r][c]?1:-1;flEl.textContent=flC;mnEl.textContent=totalM-flC;sfxFlag();render()}longT=null},400)}
+function clearLong(){if(longT){clearTimeout(longT);longT=null}}
+
+function render(){
+  bdEl.innerHTML="";bdEl.style.gridTemplateColumns="repeat("+cols+",1fr)";
+  for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
+    var d=document.createElement("div");d.className="c";
+    if(rev[r][c]){d.classList.add("r");if(grid[r][c]===-1){d.classList.add("m");d.textContent="💣"}else if(grid[r][c]>0){d.textContent=grid[r][c];d.classList.add("c"+grid[r][c])}}
+    else{d.classList.add("h");if(flg[r][c])d.classList.add("fl")}
+    (function(rr,cc){d.addEventListener("click",function(e){clickC(rr,cc,e)});d.addEventListener("contextmenu",function(e){e.preventDefault();if(!over&&!rev[rr][cc]){flg[rr][cc]=!flg[rr][cc];flC+=flg[rr][cc]?1:-1;flEl.textContent=flC;mnEl.textContent=totalM-flC;sfxFlag();render()}});d.addEventListener("touchstart",function(){startLong(rr,cc)},{passive:true});d.addEventListener("touchend",clearLong);d.addEventListener("touchmove",clearLong)})(r,c);
+    bdEl.appendChild(d);
+  }
+}
+
+document.querySelectorAll(".db").forEach(function(b){b.addEventListener("click",function(){document.querySelector(".db.on").classList.remove("on");b.classList.add("on");diff=b.dataset.d;init()})});
+document.getElementById("wB").onclick=init;document.getElementById("lB").onclick=init;
+init();
+})();
+</script>
+</body>
+</html>
