@@ -1,0 +1,107 @@
+<!-- 
+  2048游戏 (Game2048)
+  一个基于HTML5的游戏
+  作者: wangzi5151
+  版本: 1.0
+  许可证: MIT License
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>2048</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC',sans-serif}
+body{background:#faf8ef;display:flex;justify-content:center;align-items:center}
+#A{width:100vw;max-width:460px;padding:16px;display:flex;flex-direction:column;height:100vh}
+.hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.title{font-size:42px;font-weight:800;color:#776e65}
+.sc{display:flex;gap:8px}
+.sb{background:#bbada0;border-radius:6px;padding:6px 16px;text-align:center;min-width:72px}
+.sb .l{font-size:10px;color:#eee4da;text-transform:uppercase;letter-spacing:1px}
+.sb .v{font-size:20px;font-weight:700;color:#fff}
+.ct{display:flex;gap:8px;margin-bottom:12px}
+.cb{flex:1;padding:10px;font-size:14px;font-weight:600;color:#f9f6f2;background:#8f7a66;border:none;border-radius:6px;cursor:pointer;transition:transform .1s}
+.cb:active{transform:scale(.95)}
+.bw{position:relative;flex:1;display:flex;align-items:center;justify-content:center}
+.bd{position:relative;width:100%;aspect-ratio:1;background:#bbada0;border-radius:10px;padding:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.cl{background:rgba(238,228,218,.35);border-radius:6px}
+.tl{position:absolute;top:10px;left:10px;right:10px;bottom:10px;pointer-events:none}
+.t{position:absolute;display:flex;align-items:center;justify-content:center;font-weight:700;border-radius:6px;transition:top .12s ease,left .12s ease}
+.t.nw{animation:pop .2s ease}
+@keyframes pop{0%{transform:scale(0)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+.t2{background:#eee4da;color:#776e65;font-size:26px}.t4{background:#ede0c8;color:#776e65;font-size:26px}
+.t8{background:#f2b179;color:#f9f6f2;font-size:26px}.t16{background:#f59563;color:#f9f6f2;font-size:26px}
+.t32{background:#f67c5f;color:#f9f6f2;font-size:26px}.t64{background:#f65e3b;color:#f9f6f2;font-size:26px}
+.t128{background:#edcf72;color:#f9f6f2;font-size:22px}.t256{background:#edcc61;color:#f9f6f2;font-size:22px}
+.t512{background:#edc850;color:#f9f6f2;font-size:22px}.t1024{background:#edc53f;color:#f9f6f2;font-size:18px}
+.t2048{background:#edc22e;color:#f9f6f2;font-size:18px}.ts{background:#3c3a32;color:#f9f6f2;font-size:14px}
+.ov{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:center;align-items:center;background:rgba(238,228,218,.73);border-radius:10px;z-index:20}
+.ov.show{display:flex}
+.ov h2{font-size:36px;font-weight:800;color:#776e65;margin-bottom:16px}
+.ov .cb{min-width:140px}
+</style>
+</head>
+<body>
+<div id="A">
+<div class="hd"><div class="title">2048</div><div class="sc"><div class="sb"><div class="l">分数</div><div class="v" id="sc">0</div></div><div class="sb"><div class="l">最高</div><div class="v" id="bs">0</div></div></div></div>
+<div class="ct"><button class="cb" id="nB">新游戏</button><button class="cb" id="uB">撤销</button></div>
+<div class="bw"><div class="bd" id="bd"><div class="cl"></div><div class="cl"></div><div class="cl"></div><div class="cl"></div><div class="cl"></div><div class="cl"></div><div class="cl"></div><div class="cl"></div><div class="cl"></div><div class="cl"></div><div class="cl"></div><div class="cl"></div><div class="cl"></div><div class="cl"></div><div class="cl"></div><div class="cl"></div><div class="tl" id="tl"></div><div class="ov" id="ov"><h2>游戏结束!</h2><button class="cb" id="rB">再来一次</button></div></div></div>
+</div>
+<script>
+(function(){
+var AC;function initA(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume()}
+function tone(f,d,t,v){if(!AC)return;var o=AC.createOscillator(),g=AC.createGain();o.type=t||"sine";o.frequency.value=f;g.gain.setValueAtTime(v||.1,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}
+function sfxMove(){tone(180,.06,"sine",.08)}
+function sfxMerge(v){tone(200+v*40,.12,"sine",.1)}
+function sfxWin(){tone(523,.15,"sine",.1);setTimeout(function(){tone(659,.15,"sine",.1)},100);setTimeout(function(){tone(784,.2,"sine",.1)},200)}
+
+var g=[],score=0,best=+localStorage.getItem("b2048")||0,hist=[];
+var scEl=document.getElementById("sc"),bsEl=document.getElementById("bs"),tl=document.getElementById("tl"),ov=document.getElementById("ov");
+
+function init(){initA();g=[];for(var r=0;r<4;r++){g[r]=[];for(var c=0;c<4;c++)g[r][c]=0}score=0;hist=[];scEl.textContent="0";ov.classList.remove("show");add();add();draw()}
+function empty(){var e=[];for(var r=0;r<4;r++)for(var c=0;c<4;c++)if(g[r][c]===0)e.push([r,c]);return e}
+function add(){var e=empty();if(!e.length)return;var p=e[Math.floor(Math.random()*e.length)];g[p[0]][p[1]]=Math.random()<.9?2:4}
+function clone(){return g.map(function(r){return r.slice()})}
+function save(){hist.push({g:clone(),s:score});if(hist.length>30)hist.shift()}
+function undo(){if(!hist.length)return;var h=hist.pop();g=h.g;score=h.s;scEl.textContent=score;ov.classList.remove("show");draw()}
+
+function slide(arr){
+  var a=arr.filter(function(v){return v!==0}),m=false;
+  for(var i=0;i<a.length-1;i++)if(a[i]===a[i+1]){a[i]*=2;score+=a[i];a.splice(i+1,1);m=true}
+  while(a.length<4)a.push(0);
+  return{r:a,m:m}
+}
+
+function move(d){
+  if(ov.classList.contains("show"))return;
+  save();var moved=false,old=clone();
+  if(d==="l"){for(var r=0;r<4;r++){var s=slide(g[r]);g[r]=s.r;if(s.m)moved=true}}
+  else if(d==="r"){for(var r=0;r<4;r++){var s=slide(g[r].slice().reverse());g[r]=s.r.reverse();if(s.m)moved=true}}
+  else if(d==="u"){for(var c=0;c<4;c++){var col=[g[0][c],g[1][c],g[2][c],g[3][c]];var s=slide(col);for(var r=0;r<4;r++)g[r][c]=s.r[r];if(s.m)moved=true}}
+  else if(d==="d"){for(var c=0;c<4;c++){var col=[g[3][c],g[2][c],g[1][c],g[0][c]];var s=slide(col);for(var r=0;r<4;r++)g[r][c]=s.r[3-r];if(s.m)moved=true}}
+  var any=false;for(var r=0;r<4;r++)for(var c=0;c<4;c++)if(g[r][c]!==old[r][c])any=true;
+  if(!any){hist.pop();return}
+  sfxMove();
+  scEl.textContent=score;if(score>best){best=score;localStorage.setItem("b2048",best);bsEl.textContent=best}
+  add();draw();if(!canMove())ov.classList.add("show");
+}
+function canMove(){for(var r=0;r<4;r++)for(var c=0;c<4;c++){if(g[r][c]===0)return true;if(c<3&&g[r][c]===g[r][c+1])return true;if(r<3&&g[r][c]===g[r+1][c])return true}return false}
+
+function draw(){
+  tl.innerHTML="";var bw=document.querySelector(".bd").offsetWidth-20,cs=(bw-30)/4;
+  for(var r=0;r<4;r++)for(var c=0;c<4;c++){var v=g[r][c];if(v===0)continue;var el=document.createElement("div");el.className="t nw ";if(v<=2048)el.className+="t"+v;else el.className+="ts";el.textContent=v;el.style.width=cs+"px";el.style.height=cs+"px";el.style.left=(c*(cs+10))+"px";el.style.top=(r*(cs+10))+"px";tl.appendChild(el)}
+}
+
+var tx=0,ty=0;
+document.addEventListener("touchstart",function(e){tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+document.addEventListener("touchend",function(e){var dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.max(Math.abs(dx),Math.abs(dy))<30)return;if(Math.abs(dx)>Math.abs(dy))move(dx>0?"r":"l");else move(dy>0?"d":"u")},{passive:true});
+document.addEventListener("keydown",function(e){var m={ArrowLeft:"l",ArrowRight:"r",ArrowUp:"u",ArrowDown:"d"};if(m[e.key]){e.preventDefault();move(m[e.key])}});
+document.getElementById("nB").onclick=init;document.getElementById("rB").onclick=init;document.getElementById("uB").onclick=undo;
+bsEl.textContent=best;init();
+})();
+</script>
+</body>
+</html>
