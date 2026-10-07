@@ -1,0 +1,129 @@
+<!-- 
+  15拼图游戏 (Puzzle15Game)
+  一个基于HTML5的游戏
+  作者: wangzi5151
+  版本: 1.0
+  许可证: MIT License
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>数字华容道</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC',sans-serif}
+body{background:#0a0a1a;display:flex;justify-content:center;align-items:center}
+#A{display:flex;flex-direction:column;align-items:center;padding:18px;max-width:420px;width:100%}
+.hd{display:flex;justify-content:space-between;width:100%;margin-bottom:18px}
+.pn{background:#16213e;border-radius:8px;padding:8px 16px;text-align:center;min-width:72px}
+.pn .l{font-size:9px;color:#534b62;text-transform:uppercase}
+.pn .v{font-size:20px;font-weight:700;color:#7bed9f}
+.ct{display:flex;gap:8px;margin-bottom:18px;width:100%}
+.cb{flex:1;padding:9px;font-size:13px;font-weight:600;color:#fff;background:#16213e;border:2px solid transparent;border-radius:6px;cursor:pointer;text-align:center;transition:transform .08s}
+.cb.on{border-color:#7bed9f}
+.cb:active{transform:scale(.95)}
+.bd{display:grid;gap:5px;padding:8px;background:#16213e;border-radius:14px;width:100%;aspect-ratio:1}
+.t{display:flex;align-items:center;justify-content:center;font-weight:700;border-radius:8px;cursor:pointer;transition:all .12s}
+.t:active{transform:scale(.94)}
+.t.e{background:rgba(255,255,255,.02);cursor:default}
+.t.n1{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.t.n2{background:linear-gradient(135deg,#f093fb,#f5576c);color:#fff}
+.t.n3{background:linear-gradient(135deg,#4facfe,#00f2fe);color:#fff}
+.t.n4{background:linear-gradient(135deg,#43e97b,#38f9d7);color:#fff}
+.t.n5{background:linear-gradient(135deg,#fa709a,#fee140);color:#fff}
+.t.n6{background:linear-gradient(135deg,#a18cd1,#fbc2eb);color:#fff}
+.t.n7{background:linear-gradient(135deg,#fccb90,#d57eeb);color:#fff}
+.t.n8{background:linear-gradient(135deg,#e0c3fc,#8ec5fc);color:#fff}
+.t.n9{background:linear-gradient(135deg,#f5576c,#ff6b6b);color:#fff}
+.t.n10{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.t.n11{background:linear-gradient(135deg,#ff9a9e,#fecfef);color:#333}
+.t.n12{background:linear-gradient(135deg,#a1c4fd,#c2e9fb);color:#333}
+.t.n13{background:linear-gradient(135deg,#d4fc79,#96e6a1);color:#333}
+.t.n14{background:linear-gradient(135deg,#84fab0,#8fd3f4);color:#333}
+.t.n15{background:linear-gradient(135deg,#fbc2eb,#a6c1ee);color:#333}
+.hint{color:rgba(255,255,255,.25);font-size:11px;margin-top:14px}
+.ov{position:fixed;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:center;align-items:center;background:rgba(10,10,26,.85);z-index:50}
+.ov.show{display:flex}
+.ov h2{font-size:36px;color:#ffd700;margin-bottom:12px;text-shadow:0 0 24px rgba(255,215,0,.4)}
+.ov .sc{font-size:44px;color:#fff;font-weight:800;margin-bottom:22px}
+.ov button{padding:12px 46px;font-size:17px;color:#0a0a1a;background:linear-gradient(135deg,#7bed9f,#4facfe);border:none;border-radius:28px;cursor:pointer;font-weight:700;transition:transform .1s}
+.ov button:active{transform:scale(.95)}
+</style>
+</head>
+<body>
+<div id="A">
+<div class="hd">
+<div class="pn"><div class="l">步数</div><div class="v" id="mv">0</div></div>
+<div class="pn"><div class="l">时间</div><div class="v" id="tm">0s</div></div>
+<div class="pn"><div class="l">最高</div><div class="v" id="bst">—</div></div>
+</div>
+<div class="ct"><div class="cb on" data-s="3">3×3</div><div class="cb" data-s="4">4×4</div><div class="cb" data-s="5">5×5</div></div>
+<div class="bd" id="bd"></div>
+<div class="hint">点击空白格相邻的数字移动</div>
+</div>
+<div class="ov" id="win"><h2>🎉 完美!</h2><div class="sc" id="wi"></div><button id="wB">再来一局</button></div>
+<script>
+(function(){
+var AC;function initA(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume()}
+function tone(f,d,t,v){if(!AC)return;var o=AC.createOscillator(),g=AC.createGain();o.type=t||"sine";o.frequency.value=f;g.gain.setValueAtTime(v||.08,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}
+function sfxMove(){tone(300,.04,"sine",.05)}
+function sfxWin(){[523,659,784,1047].forEach(function(f,i){setTimeout(function(){tone(f,.2,"sine",.1)},i*120)})}
+
+var SIZE=4,total,g=[],eR,eC,mvs,secs,intv,st;
+var best=+localStorage.getItem("pzB4")||0;
+var bdEl=document.getElementById("bd"),mvEl=document.getElementById("mv"),tmEl=document.getElementById("tm"),bstEl=document.getElementById("bst");
+
+function init(){
+  initA();SIZE=+document.querySelector(".cb.on").dataset.s;total=SIZE*SIZE;
+  var key="pzB"+SIZE;best=+localStorage.getItem(key)||0;
+  bstEl.textContent=best>0?best+"步":"—";
+  mvs=0;secs=0;clearInterval(intv);st="idle";
+  mvEl.textContent="0";tmEl.textContent="0s";
+  document.getElementById("win").classList.remove("show");
+  gen();draw();
+}
+
+function gen(){
+  var nums=[];for(var i=1;i<total;i++)nums.push(i);nums.push(0);
+  g=[];for(var r=0;r<SIZE;r++){g[r]=[];for(var c=0;c<SIZE;c++)g[r][c]=nums[r*SIZE+c]}
+  eR=SIZE-1;eC=SIZE-1;
+  for(var i=0;i<300;i++){var adj=getAdj(eR,eC),p=adj[Math.floor(Math.random()*adj.length)];sw(eR,eC,p.r,p.c);eR=p.r;eC=p.c}
+}
+
+function getAdj(r,c){var a=[];if(r>0)a.push({r:r-1,c});if(r<SIZE-1)a.push({r:r+1,c});if(c>0)a.push({r,c:c-1});if(c<SIZE-1)a.push({r,c:c+1});return a}
+function sw(r1,c1,r2,c2){var t=g[r1][c1];g[r1][c1]=g[r2][c2];g[r2][c2]=t}
+
+function move(r,c){
+  if(st==="idle"){st="play";intv=setInterval(function(){secs++;tmEl.textContent=secs+"s"},1000)}
+  if(Math.abs(r-eR)+Math.abs(c-eC)!==1)return;
+  sw(r,c,eR,eC);var v=g[eR][eC];g[r][c]=0;g[eR][eC]=v;eR=r;eC=c;
+  sfxMove();mvs++;mvEl.textContent=mvs;draw();
+  if(chkWin()){
+    clearInterval(intv);st="won";sfxWin();
+    var key="pzB"+SIZE;
+    if(!best||mvs<best){best=mvs;localStorage.setItem(key,best);bstEl.textContent=best+"步"}
+    document.getElementById("wi").textContent=mvs+"步 · "+secs+"秒";
+    setTimeout(function(){document.getElementById("win").classList.add("show")},250);
+  }
+}
+
+function chkWin(){for(var r=0;r<SIZE;r++)for(var c=0;c<SIZE;c++){var idx=r*SIZE+c+1;if(r===SIZE-1&&c===SIZE-1)return g[r][c]===0;if(g[r][c]!==idx)return false}return true}
+
+function draw(){
+  bdEl.innerHTML="";bdEl.style.gridTemplateColumns="repeat("+SIZE+",1fr)";
+  var fs=SIZE===3?30:SIZE===4?26:20;
+  for(var r=0;r<SIZE;r++)for(var c=0;c<SIZE;c++){
+    var v=g[r][c],el=document.createElement("div");el.className="t"+(v===0?" e":" n"+v);el.style.fontSize=fs+"px";
+    if(v>0)el.textContent=v;
+    (function(rr,cc){el.addEventListener("click",function(){if(g[rr][cc]!==0)move(rr,cc)})})(r,c);bdEl.appendChild(el);
+  }
+}
+
+document.querySelectorAll(".cb").forEach(function(b){b.addEventListener("click",function(){document.querySelector(".cb.on").classList.remove("on");b.classList.add("on");init()})});
+document.getElementById("wB").onclick=init;init();
+})();
+</script>
+</body>
+</html>
