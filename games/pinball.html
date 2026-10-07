@@ -1,0 +1,196 @@
+<!-- 
+  弹球台 (PinballGame)
+  一个基于HTML5 Canvas的弹球游戏
+  作者: wangzi5151
+  版本: 1.0
+  许可证: MIT License
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>弹球台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC',sans-serif}
+body{background:#0a0a1a;display:flex;justify-content:center;align-items:center}
+#A{position:relative;width:100vw;height:100vh;max-width:400px;max-height:740px;overflow:hidden;background:linear-gradient(180deg,#0f0c29,#302b63)}
+canvas{display:block;width:100%;height:100%}
+#ui{position:absolute;top:0;left:0;width:100%;padding:14px 18px;display:flex;justify-content:space-between;z-index:10}
+.pn{background:rgba(0,0,0,.45);border:1px solid rgba(255,107,107,.25);border-radius:6px;padding:5px 12px;text-align:center}
+.pn .l{font-size:8px;color:#ff6b6b;text-transform:uppercase}
+.pn .v{font-size:16px;font-weight:700;color:#fff}
+.bls{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:10}
+.bi{width:14px;height:14px;border-radius:50%;background:#ff6b6b;box-shadow:0 0 6px rgba(255,107,107,.4)}
+.bi.u{background:#333;box-shadow:none}
+.ov{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:center;align-items:center;background:rgba(10,10,26,.9);z-index:20}
+.ov.show{display:flex}
+.ov h2{font-size:32px;color:#ff6b6b;margin-bottom:8px}
+.ov .sc{font-size:44px;color:#fff;font-weight:800;margin-bottom:22px}
+.ov button{padding:12px 46px;font-size:17px;color:#fff;background:linear-gradient(135deg,#ff6b6b,#ee5a24);border:none;border-radius:28px;cursor:pointer;font-weight:700;transition:transform .1s}
+.ov button:active{transform:scale(.95)}
+.hint{position:absolute;bottom:42px;right:18px;color:rgba(255,255,255,.25);font-size:10px;z-index:10;writing-mode:vertical-rl}
+</style>
+</head>
+<body>
+<div id="A">
+<canvas id="c"></canvas>
+<div id="ui">
+<div class="pn"><div class="l">分数</div><div class="v" id="sc">0</div></div>
+<div class="pn"><div class="l">最高</div><div class="v" id="bst">0</div></div>
+</div>
+<div class="bls" id="bls"></div>
+<div class="hint">长按蓄力发射</div>
+<div class="ov" id="st"><h2>🎰 弹球台</h2><p style="color:rgba(255,255,255,.45);margin-bottom:22px">PINBALL</p><button id="sB">开始游戏</button></div>
+<div class="ov" id="ov"><h2>💔 游戏结束</h2><div class="sc" id="FS">0</div><p>最高分: <span id="FB">0</span></p><button id="oB">再来一次</button></div>
+</div>
+<script>
+(function(){
+var cv=document.getElementById("c"),cx=cv.getContext("2d"),app=document.getElementById("A");
+var W,H;
+var AC;function initA(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume()}
+function tone(f,d,t,v){if(!AC)return;var o=AC.createOscillator(),g=AC.createGain();o.type=t||"sine";o.frequency.value=f;g.gain.setValueAtTime(v||.06,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}
+function sfxBounce(){tone(400,.04,"sine",.06)}
+function sfxBumper(f){tone(f||600,.08,"sine",.08)}
+function sfxLaunch(){tone(200,.1,"sawtooth",.06);setTimeout(function(){tone(400,.08,"sine",.04)},50)}
+function sfxDie(){tone(150,.2,"sawtooth",.06)}
+
+var score,balls,best=+localStorage.getItem("pbB")||0;
+var state,ball,launching,lp;
+var fL,fR,bumpers,walls,parts;
+var keys={};
+
+function resize(){var r=app.getBoundingClientRect();W=r.width;H=r.height;cv.width=W;cv.height=H;setup()}
+function setup(){
+  var cx2=W/2;
+  fL={x:cx2-52,y:H-85,len:55,a:.4,ta:.4};
+  fR={x:cx2+52,y:H-85,len:55,a:Math.PI-.4,ta:Math.PI-.4};
+  bumpers=[
+    {x:cx2-55,y:H*.24,r:20,col:"#ff6b6b",pts:100,anim:0},
+    {x:cx2+55,y:H*.24,r:20,col:"#ffd700",pts:100,anim:0},
+    {x:cx2,y:H*.17,r:22,col:"#00f5ff",pts:150,anim:0},
+    {x:cx2-38,y:H*.38,r:16,col:"#7bed9f",pts:75,anim:0},
+    {x:cx2+38,y:H*.38,r:16,col:"#feca57",pts:75,anim:0},
+  ];
+  walls=[{x1:18,y1:H*.48,x2:cx2-75,y2:H-115},{x1:W-18,y1:H*.48,x2:cx2+75,y2:H-115}];
+}
+
+function init(){
+  initA();resize();score=0;balls=3;parts=[];
+  document.getElementById("sc").textContent="0";updB();
+  mkBall();state="play";
+  ["st","ov"].forEach(function(id){document.getElementById(id).classList.remove("show")});
+}
+
+function mkBall(){ball={x:W-22,y:H-140,vx:0,vy:0,r:7,act:false};launching=true;lp=0}
+function updB(){var el=document.getElementById("bls");el.innerHTML="";for(var i=0;i<3;i++){var d=document.createElement("div");d.className="bi"+(i<balls?"":" u");el.appendChild(d)}}
+function addP(x,y,col,n){for(var i=0;i<n;i++)parts.push({x:x,y:y,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7,life:1,dec:.03+Math.random()*.02,sz:Math.random()*3+1,col:col})}
+
+function update(dt){
+  if(state!=="play")return;
+  if(launching){if(keys.Space||keys.ArrowUp)lp=Math.min(1,lp+.018);return}
+  if(!ball)return;
+  ball.vy+=.14;ball.x+=ball.vx;ball.y+=ball.vy;ball.vx*=.999;
+  if(ball.x-ball.r<18){ball.x=ball.r+18;ball.vx=Math.abs(ball.vx)*.75;sfxBounce()}
+  if(ball.x+ball.r>W-18){ball.x=W-18-ball.r;ball.vx=-Math.abs(ball.vx)*.75;sfxBounce()}
+  if(ball.y-ball.r<55){ball.y=ball.r+55;ball.vy=Math.abs(ball.vy)*.75;sfxBounce()}
+  fL.ta=keys.ArrowLeft||keys.KeyA?-.55:.4;
+  fR.ta=keys.ArrowRight||keys.KeyD?Math.PI+.55:Math.PI-.4;
+  fL.a+=(fL.ta-fL.a)*.28;fR.a+=(fR.ta-fR.a)*.28;
+  flipHit(fL);flipHit(fR);
+  for(var i=0;i<bumpers.length;i++){
+    var b=bumpers[i],dx=ball.x-b.x,dy=ball.y-b.y,dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist<ball.r+b.r){
+      var nx=dx/dist,ny=dy/dist;
+      ball.x=b.x+nx*(ball.r+b.r+2);ball.y=b.y+ny*(ball.r+b.r+2);
+      var dot=ball.vx*nx+ball.vy*ny;ball.vx-=2*dot*nx;ball.vy-=2*dot*ny;
+      ball.vx*=1.08;ball.vy*=1.08;score+=b.pts;b.anim=1;sfxBumper(400+b.pts);
+      addP(b.x,b.y,b.col,7);document.getElementById("sc").textContent=score;
+    }
+    if(b.anim>0)b.anim-=.04;
+  }
+  for(var i=0;i<walls.length;i++){
+    var w=walls[i],dx=w.x2-w.x1,dy=w.y2-w.y1,len=Math.sqrt(dx*dx+dy*dy);
+    var nx=-dy/len,ny=dx/len,bx=ball.x-w.x1,by=ball.y-w.y1,dist=bx*nx+by*ny;
+    if(Math.abs(dist)<ball.r){var dot=ball.vx*nx+ball.vy*ny;if(dot<0){ball.vx-=2*dot*nx;ball.vy-=2*dot*ny;ball.x+=nx*(ball.r-Math.abs(dist));ball.y+=ny*(ball.r-Math.abs(dist));sfxBounce()}}
+  }
+  if(ball.y>H+18){
+    balls--;updB();
+    if(balls<=0){state="dead";sfxDie();if(score>best){best=score;localStorage.setItem("pbB",best)}document.getElementById("FS").textContent=score;document.getElementById("FB").textContent=best;setTimeout(function(){document.getElementById("ov").classList.add("show")},350)}
+    else mkBall();
+  }
+}
+
+function flipHit(f){
+  if(!ball)return;
+  var ex=f.x+Math.cos(f.a)*f.len,ey=f.y+Math.sin(f.a)*f.len;
+  var dx=ex-f.x,dy=ey-f.y,len=Math.sqrt(dx*dx+dy*dy);
+  var nx=-dy/len,ny=dx/len,bx=ball.x-f.x,by=ball.y-f.y,dist=bx*nx+by*ny;
+  if(Math.abs(dist)<ball.r+3){
+    var flipV=(f.ta-f.a)*f.len*.25;
+    ball.vy=-Math.abs(ball.vy)*.7-flipV;ball.vx+=(bx/len)*2.5;ball.y=f.y-ball.r-4;sfxBounce();
+  }
+}
+
+function draw(){
+  cx.clearRect(0,0,W,H);
+  var g=cx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#0f0c29");g.addColorStop(1,"#1a1a3e");
+  cx.fillStyle=g;cx.fillRect(0,0,W,H);
+  cx.strokeStyle="rgba(255,107,107,.25)";cx.lineWidth=2.5;
+  cx.beginPath();cx.moveTo(18,H*.48);cx.lineTo(W/2-75,H-115);cx.stroke();
+  cx.beginPath();cx.moveTo(W-18,H*.48);cx.lineTo(W/2+75,H-115);cx.stroke();
+  cx.strokeStyle="rgba(255,255,255,.15)";cx.lineWidth=1.5;
+  cx.beginPath();cx.moveTo(18,55);cx.lineTo(18,H*.48);cx.stroke();
+  cx.beginPath();cx.moveTo(W-18,55);cx.lineTo(W-18,H*.48);cx.stroke();
+  cx.beginPath();cx.moveTo(18,55);cx.lineTo(W-18,55);cx.stroke();
+  for(var i=0;i<bumpers.length;i++){
+    var b=bumpers[i],sc=1+b.anim*.25;
+    cx.save();cx.translate(b.x,b.y);cx.scale(sc,sc);
+    cx.shadowColor=b.col;cx.shadowBlur=12+b.anim*18;cx.fillStyle=b.col;
+    cx.beginPath();cx.arc(0,0,b.r,0,Math.PI*2);cx.fill();
+    cx.fillStyle="rgba(255,255,255,.18)";cx.beginPath();cx.arc(-2,-2,b.r*.35,0,Math.PI*2);cx.fill();
+    cx.shadowBlur=0;cx.fillStyle="#fff";cx.font="bold 10px sans-serif";cx.textAlign="center";cx.textBaseline="middle";cx.fillText(b.pts,0,0);
+    cx.restore();
+  }
+  [fL,fR].forEach(function(f){
+    var ex=f.x+Math.cos(f.a)*f.len,ey=f.y+Math.sin(f.a)*f.len;
+    cx.strokeStyle="#fff";cx.lineWidth=9;cx.lineCap="round";cx.beginPath();cx.moveTo(f.x,f.y);cx.lineTo(ex,ey);cx.stroke();
+    cx.strokeStyle="rgba(255,255,255,.25)";cx.lineWidth=5;cx.beginPath();cx.moveTo(f.x,f.y);cx.lineTo(ex,ey);cx.stroke();
+  });
+  if(ball){
+    cx.shadowColor="#ff6b6b";cx.shadowBlur=12;cx.fillStyle="#ff6b6b";
+    cx.beginPath();cx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);cx.fill();
+    cx.fillStyle="rgba(255,255,255,.25)";cx.beginPath();cx.arc(ball.x-2,ball.y-2,ball.r*.25,0,Math.PI*2);cx.fill();
+    cx.shadowBlur=0;
+  }
+  if(launching){var bx=W-18,by=H-160,bw=7,bh=70;cx.fillStyle="rgba(255,255,255,.08)";cx.fillRect(bx,by,bw,bh);cx.fillStyle="#ff6b6b";cx.fillRect(bx,by+bh*(1-lp),bw,bh*lp)}
+  for(var i=0;i<parts.length;i++){var p=parts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.08;p.life-=p.dec;cx.globalAlpha=p.life;cx.fillStyle=p.col;cx.beginPath();cx.arc(p.x,p.y,p.sz,0,Math.PI*2);cx.fill()}
+  cx.globalAlpha=1;parts=parts.filter(function(p){return p.life>0});
+}
+
+var lt=0;function loop(t){var dt=Math.min(t-lt,33);lt=t;update(dt);draw();requestAnimationFrame(loop)}
+
+document.addEventListener("keydown",function(e){keys[e.code]=true});
+document.addEventListener("keyup",function(e){
+  keys[e.code]=false;
+  if(e.code==="Space"&&launching&&state==="play"){initA();sfxLaunch();ball.vx=(Math.random()-.5)*2;ball.vy=-7-lp*11;ball.act=true;launching=false;lp=0}
+});
+cv.addEventListener("touchstart",function(e){
+  e.preventDefault();initA();
+  if(launching&&state==="play")keys.Space=true;
+  var t=e.touches[0],r=cv.getBoundingClientRect(),x=(t.clientX-r.left)/r.width*W;
+  if(x<W/2)keys.ArrowLeft=true;else keys.ArrowRight=true;
+},{passive:false});
+cv.addEventListener("touchend",function(){
+  keys.Space=false;
+  if(launching&&state==="play"&&ball){sfxLaunch();ball.vx=(Math.random()-.5)*2;ball.vy=-7-lp*11;ball.act=true;launching=false;lp=0}
+  keys.ArrowLeft=keys.ArrowRight=false;
+},{passive:false});
+document.getElementById("sB").onclick=init;document.getElementById("oB").onclick=init;
+document.getElementById("bst").textContent=best;
+parts=[];resize();addEventListener("resize",resize);requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
