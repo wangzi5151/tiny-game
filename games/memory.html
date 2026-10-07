@@ -1,0 +1,116 @@
+<!-- 
+  记忆游戏 (MemoryGame)
+  一个基于HTML5的游戏
+  作者: wangzi5151
+  版本: 1.0
+  许可证: MIT License
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>翻牌记忆</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC',sans-serif}
+body{background:#0f0c29;display:flex;justify-content:center;align-items:center}
+#A{display:flex;flex-direction:column;align-items:center;padding:14px;max-width:460px;width:100%}
+.hd{display:flex;justify-content:space-between;width:100%;margin-bottom:14px}
+.pn{background:rgba(22,33,62,.8);border-radius:8px;padding:8px 14px;text-align:center;min-width:68px}
+.pn .l{font-size:9px;color:#8b7aa8;text-transform:uppercase}
+.pn .v{font-size:20px;font-weight:700;color:#ffd700}
+.ct{display:flex;gap:8px;margin-bottom:14px;width:100%}
+.cb{flex:1;padding:9px;font-size:12px;font-weight:600;color:#fff;background:#1a1a4e;border:2px solid transparent;border-radius:6px;cursor:pointer;text-align:center;transition:transform .08s}
+.cb.on{border-color:#ffd700}
+.cb:active{transform:scale(.95)}
+.bd{display:grid;gap:7px;width:100%;justify-content:center}
+.cd{aspect-ratio:1;border-radius:10px;cursor:pointer;perspective:800px;position:relative}
+.ci{width:100%;height:100%;transition:transform .4s cubic-bezier(.4,0,.2,1);transform-style:preserve-3d;position:relative}
+.cd.fl .ci{transform:rotateY(180deg)}
+.cd.mt .ci{transform:rotateY(180deg)}
+.cf{position:absolute;width:100%;height:100%;backface-visibility:hidden;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.cfr{background:linear-gradient(135deg,#2d1b69,#11998e);box-shadow:0 3px 12px rgba(0,0,0,.25)}
+.cfr::after{content:"?";font-size:22px;color:rgba(255,255,255,.25);font-weight:700}
+.cbk{background:linear-gradient(135deg,#1a1a4e,#16213e);transform:rotateY(180deg);font-size:30px;box-shadow:0 3px 12px rgba(0,0,0,.25)}
+.cd.mt .cbk{animation:mp .4s ease}
+@keyframes mp{0%{transform:rotateY(180deg) scale(1)}50%{transform:rotateY(180deg) scale(1.18)}100%{transform:rotateY(180deg) scale(1)}}
+.cd:not(.fl):not(.mt):active .ci{transform:scale(.94)}
+.ov{position:fixed;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:center;align-items:center;background:rgba(15,12,41,.9);z-index:50}
+.ov.show{display:flex}
+.ov h2{font-size:34px;color:#ffd700;margin-bottom:8px;text-shadow:0 0 16px rgba(255,215,0,.35)}
+.ov .sc{font-size:44px;color:#fff;font-weight:800;margin-bottom:22px}
+.ov button{padding:12px 46px;font-size:17px;color:#0f0c29;background:linear-gradient(135deg,#ffd700,#ff9f43);border:none;border-radius:28px;cursor:pointer;font-weight:700;transition:transform .1s}
+.ov button:active{transform:scale(.95)}
+</style>
+</head>
+<body>
+<div id="A">
+<div class="hd">
+<div class="pn"><div class="l">翻牌</div><div class="v" id="mv">0</div></div>
+<div class="pn"><div class="l">配对</div><div class="v" id="pr">0/8</div></div>
+<div class="pn"><div class="l">最高</div><div class="v" id="bst">—</div></div>
+</div>
+<div class="ct"><div class="cb on" data-p="8">8对</div><div class="cb" data-p="10">10对</div><div class="cb" data-p="12">12对</div></div>
+<div class="bd" id="bd"></div>
+</div>
+<div class="ov" id="win"><h2>🎉 完美记忆!</h2><div class="sc" id="wi"></div><button id="wB">再来一局</button></div>
+<script>
+(function(){
+var EMO=["🍎","🍊","🍋","🍇","🍉","🍓","🍑","🥝","🍒","🫐","🥭","🍍"];
+var nP=8,mvs=0,fl=[],mt=new Set(),lkd=false,best;
+var bdEl=document.getElementById("bd"),mvEl=document.getElementById("mv"),prEl=document.getElementById("pr"),bstEl=document.getElementById("bst");
+var AC;function initA(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume()}
+function tone(f,d,t,v){if(!AC)return;var o=AC.createOscillator(),g=AC.createGain();o.type=t||"sine";o.frequency.value=f;g.gain.setValueAtTime(v||.08,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}
+function sfxFlip(){tone(500,.05,"sine",.06)}
+function sfxMatch(){tone(700,.1,"sine",.08);setTimeout(function(){tone(900,.1,"sine",.06)},60)}
+function sfxMismatch(){tone(250,.08,"sawtooth",.04)}
+function sfxWin(){[523,659,784,1047].forEach(function(f,i){setTimeout(function(){tone(f,.2,"sine",.1)},i*120)})}
+
+function init(){
+  initA();nP=+document.querySelector(".cb.on").dataset.p;
+  var key="memB"+nP;best=+localStorage.getItem(key)||0;
+  bstEl.textContent=best>0?best+"次":"—";
+  mvs=0;fl=[];mt=new Set();lkd=false;
+  mvEl.textContent="0";prEl.textContent="0/"+nP;
+  document.getElementById("win").classList.remove("show");
+  var emojis=EMO.slice(0,nP);var cards=emojis.concat(emojis);
+  for(var i=cards.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=cards[i];cards[i]=cards[j];cards[j]=t}
+  render(cards);
+}
+
+function render(cards){
+  bdEl.innerHTML="";var cols=nP<=8?4:nP<=10?4:5;
+  bdEl.style.gridTemplateColumns="repeat("+cols+",1fr)";
+  cards.forEach(function(emoji,i){
+    var el=document.createElement("div");el.className="cd";el.dataset.i=i;el.dataset.emoji=emoji;
+    el.innerHTML='<div class="ci"><div class="cf cfr"></div><div class="cf cbk">'+emoji+'</div></div>';
+    el.addEventListener("click",function(){flipCard(el)});bdEl.appendChild(el);
+  });
+}
+
+function flipCard(card){
+  if(lkd||card.classList.contains("fl")||card.classList.contains("mt")||fl.length>=2)return;
+  initA();sfxFlip();card.classList.add("fl");fl.push(card);
+  if(fl.length===2){
+    mvs++;mvEl.textContent=mvs;lkd=true;
+    if(fl[0].dataset.emoji===fl[1].dataset.emoji){
+      sfxMatch();fl[0].classList.add("mt");fl[1].classList.add("mt");
+      mt.add(fl[0].dataset.i);mt.add(fl[1].dataset.i);
+      prEl.textContent=mt.size/2+"/"+nP;fl=[];lkd=false;
+      if(mt.size===nP*2){
+        sfxWin();var key="memB"+nP;
+        if(!best||mvs<best){best=mvs;localStorage.setItem(key,best);bstEl.textContent=best+"次"}
+        document.getElementById("wi").textContent=mvs+"次翻牌";
+        setTimeout(function(){document.getElementById("win").classList.add("show")},350);
+      }
+    }else{sfxMismatch();setTimeout(function(){fl[0].classList.remove("fl");fl[1].classList.remove("fl");fl=[];lkd=false},700)}
+  }
+}
+
+document.querySelectorAll(".cb").forEach(function(b){b.addEventListener("click",function(){document.querySelector(".cb.on").classList.remove("on");b.classList.add("on");init()})});
+document.getElementById("wB").onclick=init;init();
+})();
+</script>
+</body>
+</html>
