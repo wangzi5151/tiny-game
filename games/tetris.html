@@ -1,0 +1,161 @@
+<!-- 
+  俄罗斯方块游戏 (TetrisGame)
+  一个基于HTML5的游戏
+  作者: wangzi5151
+  版本: 1.0
+  许可证: MIT License
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>俄罗斯方块</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC',sans-serif}
+body{background:#0f0f23;display:flex;justify-content:center;align-items:center}
+#A{display:flex;gap:16px;padding:16px;max-width:560px;max-height:95vh}
+.bw{position:relative}
+.b{display:grid;grid-template-columns:repeat(10,28px);grid-template-rows:repeat(20,28px);gap:1px;background:#1a1a2e;border:2px solid #16213e;border-radius:4px;padding:3px}
+.c{width:28px;height:28px;background:#0f0f23;border-radius:2px;transition:background .08s}
+.c.f{border:1px solid rgba(255,255,255,.12)}
+.sd{display:flex;flex-direction:column;gap:12px;min-width:110px}
+.pn{background:#1a1a2e;border:1px solid #16213e;border-radius:8px;padding:10px;text-align:center}
+.pn .l{font-size:10px;color:#534b62;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.pn .v{font-size:20px;font-weight:700;color:#e94560}
+.ng{display:grid;grid-template-columns:repeat(4,20px);grid-template-rows:repeat(4,20px);gap:2px;justify-content:center}
+.nc{width:20px;height:20px;background:#0f0f23;border-radius:2px}.nc.f{border:1px solid rgba(255,255,255,.12)}
+.ctrls{display:flex;flex-direction:column;gap:6px;margin-top:auto}
+.cb{padding:10px;font-size:13px;font-weight:600;color:#fff;background:#16213e;border:1px solid #1a1a4e;border-radius:6px;cursor:pointer;text-align:center;transition:transform .08s}
+.cb:active{transform:scale(.94);background:#e94560}
+.ov{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:center;align-items:center;background:rgba(15,15,35,.85);z-index:20;border-radius:4px}
+.ov.show{display:flex}
+.ov h2{font-size:26px;color:#e94560;margin-bottom:12px}
+.ov .cb{padding:10px 28px;font-size:15px;background:#e94560;border:none}
+</style>
+</head>
+<body>
+<div id="A">
+<div class="bw"><div class="b" id="bd"></div><div class="ov" id="pa"><h2>暂停</h2><button class="cb" id="paB">继续</button></div><div class="ov" id="ov"><h2>游戏结束</h2><button class="cb" id="ovB">再来一次</button></div></div>
+<div class="sd">
+<div class="pn"><div class="l">分数</div><div class="v" id="sc">0</div></div>
+<div class="pn"><div class="l">等级</div><div class="v" id="lv">1</div></div>
+<div class="pn"><div class="l">行数</div><div class="v" id="ln">0</div></div>
+<div class="pn"><div class="l">下一个</div><div class="ng" id="ng"></div></div>
+<div class="ctrls">
+<div class="cb" id="lB">◀ 左移</div><div class="cb" id="rB">右移 ▶</div>
+<div class="cb" id="dB">▼ 软降</div><div class="cb" id="rTB">↻ 旋转</div>
+<div class="cb" id="drB">⏬ 硬降</div><div class="cb" id="pB">⏸ 暂停</div>
+</div>
+</div>
+</div>
+<script>
+(function(){
+var AC;function initA(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume()}
+function tone(f,d,t,v){if(!AC)return;var o=AC.createOscillator(),g=AC.createGain();o.type=t||"sine";o.frequency.value=f;g.gain.setValueAtTime(v||.08,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}
+function sfxMove(){tone(200,.04,"sine",.06)}
+function sfxRotate(){tone(300,.06,"sine",.06)}
+function sfxDrop(){tone(120,.08,"triangle",.08)}
+function sfxClear(n){for(var i=0;i<n;i++)setTimeout(function(){tone(400+i*100,.12,"sine",.08)},i*60)}
+function sfxOver(){tone(200,.3,"sawtooth",.06)}
+
+var ROWS=20,COLS=10;
+var SHAPES=[[[1,1,1,1]],[[1,1],[1,1]],[[0,1,0],[1,1,1]],[[1,0,0],[1,1,1]],[[0,0,1],[1,1,1]],[[1,1,0],[0,1,1]],[[0,1,1],[1,1,0]]];
+var COLORS=["#00f5ff","#feca57","#7b68ee","#ff9f43","#ff6b6b","#7bed9f","#ff9ff3"];
+var bdEl=document.getElementById("bd"),scEl=document.getElementById("sc"),lvEl=document.getElementById("lv"),lnEl=document.getElementById("ln"),ngEl=document.getElementById("ng");
+var board,cur,nxt,score,level,totalL,dropInt,dropT,state,lastT,particles=[];
+
+function init(){
+  initA();board=[];for(var r=0;r<ROWS;r++){board[r]=[];for(var c=0;c<COLS;c++)board[r][c]=-1}
+  score=0;level=1;totalL=0;dropInt=500;dropT=0;state="play";lastT=0;particles=[];
+  scEl.textContent="0";lvEl.textContent="1";lnEl.textContent="0";
+  document.getElementById("pa").classList.remove("show");document.getElementById("ov").classList.remove("show");
+  nxt=mkP();spawn();buildC();drawN();
+}
+
+function mkP(){var i=Math.floor(Math.random()*SHAPES.length);var s=SHAPES[i].map(function(r){return r.slice()});return{shape:s,ci:i,x:Math.floor(COLS/2)-Math.floor(s[0].length/2),y:0}}
+function spawn(){cur=nxt;nxt=mkP();drawN();if(!fits(cur.shape,cur.x,cur.y))gameOver()}
+function rot(s){var rows=s.length,cols=s[0].length,r=[];for(var c=0;c<cols;c++){r[c]=[];for(var row=rows-1;row>=0;row--)r[c].push(s[row][c])}return r}
+function fits(s,px,py){for(var r=0;r<s.length;r++)for(var c=0;c<s[r].length;c++){if(!s[r][c])continue;var nx=px+c,ny=py+r;if(nx<0||nx>=COLS||ny>=ROWS)return false;if(ny>=0&&board[ny][nx]!==-1)return false}return true}
+
+function lock(){
+  for(var r=0;r<cur.shape.length;r++)for(var c=0;c<cur.shape[r].length;c++){
+    if(!cur.shape[r][c])continue;var ny=cur.y+r;if(ny<0){gameOver();return}board[ny][cur.x+c]=cur.ci;
+  }
+  var cl=clearL();if(cl>0)sfxClear(cl);else sfxDrop();spawn();
+}
+
+function clearL(){
+  var cleared=0;
+  for(var r=ROWS-1;r>=0;r--){
+    var full=true;for(var c=0;c<COLS;c++)if(board[r][c]===-1){full=false;break}
+    if(full){
+      for(var c=0;c<COLS;c++)particles.push({x:c*28+14,y:r*28+14,vx:(Math.random()-.5)*4,vy:-Math.random()*3-1,life:1,dec:.04,sz:Math.random()*3+1,col:COLORS[board[r][c]]||"#fff"});
+      board.splice(r,1);var nw=[];for(var c=0;c<COLS;c++)nw.push(-1);board.unshift(nw);cleared++;r++
+    }
+  }
+  if(cleared>0){var pts=[0,100,300,500,800];score+=pts[cleared]*level;totalL+=cleared;level=Math.floor(totalL/10)+1;dropInt=Math.max(80,500-level*35);scEl.textContent=score;lvEl.textContent=level;lnEl.textContent=totalL}
+  return cleared;
+}
+
+function hardDrop(){var n=0;while(fits(cur.shape,cur.x,cur.y+1)){cur.y++;n++}if(n>0)sfxDrop();lock()}
+function ghostY(){var gy=cur.y;while(fits(cur.shape,cur.x,gy+1))gy++;return gy}
+function buildC(){bdEl.innerHTML="";for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++){var d=document.createElement("div");d.className="c";bdEl.appendChild(d)}}
+
+function draw(){
+  var cells=bdEl.children;
+  for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++){
+    var cell=cells[r*COLS+c];cell.className="c";cell.style.background="";
+    if(board[r][c]!==-1){cell.classList.add("f");cell.style.background=COLORS[board[r][c]]}
+  }
+  var gy=ghostY();
+  for(var r=0;r<cur.shape.length;r++)for(var c=0;c<cur.shape[r].length;c++){
+    if(!cur.shape[r][c])continue;var pr=gy+r,pc=cur.x+c;
+    if(pr>=0&&pr<ROWS&&pc>=0&&pc<COLS){var cell=cells[pr*COLS+pc];cell.style.background="rgba(255,255,255,.06)";cell.style.border="1px dashed rgba(255,255,255,.12)"}
+  }
+  for(var r=0;r<cur.shape.length;r++)for(var c=0;c<cur.shape[r].length;c++){
+    if(!cur.shape[r][c])continue;var pr=cur.y+r,pc=cur.x+c;
+    if(pr>=0&&pr<ROWS&&pc>=0&&pc<COLS){var cell=cells[pr*COLS+pc];cell.className="c f";cell.style.background=COLORS[cur.ci]}
+  }
+  for(var i=0;i<particles.length;i++){
+    var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.08;p.life-=p.dec;
+    cx2.globalAlpha=p.life;cx2.fillStyle=p.col;cx2.beginPath();cx2.arc(p.x,p.y,p.sz,0,Math.PI*2);cx2.fill();
+  }
+  cx2.globalAlpha=1;particles=particles.filter(function(p){return p.life>0});
+}
+
+function drawN(){ngEl.innerHTML="";for(var r=0;r<4;r++)for(var c=0;c<4;c++){var d=document.createElement("div");d.className="nc";if(nxt.shape[r]&&nxt.shape[r][c]){d.classList.add("f");d.style.background=COLORS[nxt.ci]}ngEl.appendChild(d)}}
+function gameOver(){state="dead";sfxOver();document.getElementById("ov").classList.add("show")}
+
+var cx2=document.createElement("canvas").getContext("2d");
+
+function loop(t){
+  if(!lastT)lastT=t;var dt=t-lastT;lastT=t;
+  if(state==="play"){dropT+=dt;if(dropT>=dropInt){dropT=0;if(!fits(cur.shape,cur.x,cur.y+1))lock();else cur.y++}draw()}
+  requestAnimationFrame(loop);
+}
+
+document.addEventListener("keydown",function(e){
+  if(state!=="play")return;
+  if(e.code==="ArrowLeft"){if(fits(cur.shape,cur.x-1,cur.y)){cur.x--;sfxMove()}draw()}
+  else if(e.code==="ArrowRight"){if(fits(cur.shape,cur.x+1,cur.y)){cur.x++;sfxMove()}draw()}
+  else if(e.code==="ArrowDown"){if(fits(cur.shape,cur.x,cur.y+1)){cur.y++;dropT=0}draw()}
+  else if(e.code==="ArrowUp"||e.code==="KeyX"){var r=rot(cur.shape);if(fits(r,cur.x,cur.y)){cur.shape=r;sfxRotate()}else if(fits(r,cur.x-1,cur.y)){cur.shape=r;cur.x--;sfxRotate()}else if(fits(r,cur.x+1,cur.y)){cur.shape=r;cur.x++;sfxRotate()}else if(fits(r,cur.x-2,cur.y)){cur.shape=r;cur.x-=2;sfxRotate()}else if(fits(r,cur.x+2,cur.y)){cur.shape=r;cur.x+=2;sfxRotate()}draw()}
+  else if(e.code==="Space"){e.preventDefault();hardDrop()}
+  else if(e.code==="Escape"||e.code==="KeyP"){state="pause";document.getElementById("pa").classList.add("show")}
+});
+
+document.getElementById("lB").onclick=function(){if(state==="play"&&fits(cur.shape,cur.x-1,cur.y)){cur.x--;sfxMove();draw()}};
+document.getElementById("rB").onclick=function(){if(state==="play"&&fits(cur.shape,cur.x+1,cur.y)){cur.x++;sfxMove();draw()}};
+document.getElementById("dB").onclick=function(){if(state==="play"&&fits(cur.shape,cur.x,cur.y+1)){cur.y++;dropT=0;draw()}};
+document.getElementById("rTB").onclick=function(){if(state!=="play")return;var r=rot(cur.shape);if(fits(r,cur.x,cur.y)){cur.shape=r;sfxRotate()}else if(fits(r,cur.x-1,cur.y)){cur.shape=r;cur.x--;sfxRotate()}else if(fits(r,cur.x+1,cur.y)){cur.shape=r;cur.x++;sfxRotate()}draw()};
+document.getElementById("drB").onclick=function(){if(state==="play")hardDrop()};
+document.getElementById("pB").onclick=function(){if(state==="play"){state="pause";document.getElementById("pa").classList.add("show")}};
+document.getElementById("paB").onclick=function(){state="play";document.getElementById("pa").classList.remove("show")};
+document.getElementById("ovB").onclick=init;
+init();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
