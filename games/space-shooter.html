@@ -1,0 +1,187 @@
+<!-- 
+  太空射击游戏 (SpaceShooterGame)
+  一个基于HTML5的游戏
+  作者: wangzi5151
+  版本: 1.0
+  许可证: MIT License
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>太空射击</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC',sans-serif}
+body{background:#000;display:flex;justify-content:center;align-items:center}
+#A{position:relative;width:100vw;height:100vh;max-width:420px;max-height:780px;overflow:hidden;background:#000}
+canvas{display:block;width:100%;height:100%}
+#ui{position:absolute;top:0;left:0;width:100%;padding:14px 18px;display:flex;justify-content:space-between;z-index:10}
+.pn{background:rgba(0,0,0,.5);border:1px solid rgba(0,245,255,.2);border-radius:6px;padding:5px 12px;text-align:center}
+.pn .l{font-size:8px;color:#00f5ff;text-transform:uppercase;letter-spacing:1px}
+.pn .v{font-size:16px;font-weight:700;color:#fff}
+#hp{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);width:140px;height:7px;background:rgba(255,255,255,.08);border-radius:4px;z-index:10;overflow:hidden}
+#hpf{width:100%;height:100%;background:linear-gradient(90deg,#00f5ff,#7bed9f);border-radius:4px;transition:width .3s}
+.ov{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:center;align-items:center;background:rgba(0,0,0,.85);z-index:30}
+.ov.show{display:flex}
+.ov h2{font-size:32px;color:#00f5ff;margin-bottom:8px;text-shadow:0 0 16px rgba(0,245,255,.4)}
+.ov .sc{font-size:44px;color:#fff;font-weight:800;margin-bottom:4px}
+.ov p{color:rgba(255,255,255,.45);margin-bottom:22px}
+.ov button{padding:12px 46px;font-size:17px;color:#000;background:linear-gradient(135deg,#00f5ff,#7bed9f);border:none;border-radius:28px;cursor:pointer;font-weight:700;transition:transform .1s}
+.ov button:active{transform:scale(.95)}
+.dp{position:absolute;bottom:26px;left:16px;display:grid;grid-template-columns:repeat(3,46px);grid-template-rows:repeat(3,46px);gap:3px;z-index:15}
+.db{background:rgba(0,245,255,.08);border:1px solid rgba(0,245,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;color:rgba(0,255,255,.4);cursor:pointer;transition:transform .08s}
+.db:active{transform:scale(.9);background:rgba(0,245,255,.25)}
+.db.e{background:transparent;border:none}
+.fb{position:absolute;bottom:44px;right:26px;width:62px;height:62px;border-radius:50%;background:rgba(255,107,107,.15);border:2px solid rgba(255,107,107,.3);display:flex;align-items:center;justify-content:center;font-size:20px;color:#ff6b6b;cursor:pointer;z-index:15;transition:transform .08s}
+.fb:active{transform:scale(.9);background:rgba(255,107,107,.4)}
+</style>
+</head>
+<body>
+<div id="A">
+<canvas id="c"></canvas>
+<div id="ui">
+<div class="pn"><div class="l">分数</div><div class="v" id="sc">0</div></div>
+<div class="pn"><div class="l">波次</div><div class="v" id="wv">1</div></div>
+<div class="pn"><div class="l">最高</div><div class="v" id="bst">0</div></div>
+</div>
+<div id="hp"><div id="hpf"></div></div>
+<div class="dp">
+<div class="db e"></div><div class="db" id="uB">▲</div><div class="db e"></div>
+<div class="db" id="lB">◀</div><div class="db e"></div><div class="db" id="rB">▶</div>
+<div class="db e"></div><div class="db" id="dB">▼</div><div class="db e"></div>
+</div>
+<div class="fb" id="fB">🔥</div>
+<div class="ov" id="st"><h2>🚀 太空射击</h2><p>SPACE SHOOTER</p><button id="sB">开始游戏</button></div>
+<div class="ov" id="ov"><h2>💥 游戏结束</h2><div class="sc" id="FS">0</div><p>波次: <span id="FW">1</span></p><button id="oB">再来一次</button></div>
+</div>
+<script>
+(function(){
+var cv=document.getElementById("c"),cx=cv.getContext("2d"),app=document.getElementById("A");
+var W,H;
+var AC;function initA(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume()}
+function tone(f,d,t,v){if(!AC)return;var o=AC.createOscillator(),g=AC.createGain();o.type=t||"sine";o.frequency.value=f;g.gain.setValueAtTime(v||.06,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}
+function sfxShoot(){tone(800,.05,"square",.04);tone(600,.03,"sine",.03)}
+function sfxHit(){tone(300,.06,"sine",.05)}
+function sfxExplode(){tone(150,.15,"sawtooth",.06);tone(100,.2,"square",.04)}
+function sfxPower(){tone(700,.1,"sine",.08);setTimeout(function(){tone(900,.1,"sine",.06)},60)}
+function sfxDie(){tone(200,.3,"sawtooth",.06);setTimeout(function(){tone(100,.4,"sawtooth",.04)},100)}
+
+var pl,buls,eBuls,enemies,parts,pows,score,wave,best=+localStorage.getItem("shB")||0,hp,maxHp=100;
+var state,spawnT,keys={},shootCD=0;
+
+function resize(){var r=app.getBoundingClientRect();W=r.width;H=r.height;cv.width=W;cv.height=H}
+function init(){
+  initA();resize();score=0;wave=1;hp=maxHp;shootCD=0;
+  pl={x:W/2,y:H-90,w:32,h:32,sp:4.5};
+  buls=[];eBuls=[];enemies=[];parts=[];pows=[];spawnT=0;state="play";
+  document.getElementById("sc").textContent="0";document.getElementById("wv").textContent="1";document.getElementById("hpf").style.width="100%";
+  ["st","ov"].forEach(function(id){document.getElementById(id).classList.remove("show")});
+}
+
+function spawnE(){
+  var types=[{hp:1,sp:1.8,sz:18,col:"#ff6b6b",pts:10},{hp:2,sp:1.3,sz:22,col:"#ff9f43",pts:20},{hp:3,sp:.9,sz:26,col:"#feca57",pts:30}];
+  var t=types[Math.floor(Math.random()*Math.min(types.length,wave))];
+  enemies.push({x:Math.random()*(W-60)+30,y:-30,...t,mhp:t.hp,st:Math.random()*1500+800});
+}
+function addP(x,y,col,n){for(var i=0;i<n;i++)parts.push({x:x,y:y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,life:1,dec:.03+Math.random()*.02,sz:Math.random()*3+1,col:col})}
+
+function update(dt){
+  if(state!=="play")return;
+  var s=pl.sp;
+  if(keys.ArrowLeft||keys.KeyA)pl.x-=s;if(keys.ArrowRight||keys.KeyD)pl.x+=s;
+  if(keys.ArrowUp||keys.KeyW)pl.y-=s;if(keys.ArrowDown||keys.KeyS)pl.y+=s;
+  pl.x=Math.max(pl.w/2,Math.min(W-pl.w/2,pl.x));pl.y=Math.max(pl.w/2,Math.min(H-pl.w/2,pl.y));
+  shootCD-=dt;
+  if((keys.Space||keys.ArrowUp)&&shootCD<=0){shootCD=140;buls.push({x:pl.x,y:pl.y-pl.h/2,vy:-8,w:3,h:10,col:"#00f5ff"});sfxShoot()}
+  for(var i=buls.length-1;i>=0;i--){buls[i].y+=buls[i].vy;if(buls[i].y<-10)buls.splice(i,1)}
+  for(var i=eBuls.length-1;i>=0;i--){
+    var b=eBuls[i];b.x+=b.vx;b.y+=b.vy;
+    if(b.y>H+10||b.y<-10||b.x<-10||b.x>W+10){eBuls.splice(i,1);continue}
+    if(Math.abs(b.x-pl.x)<pl.w/2+b.w&&Math.abs(b.y-pl.y)<pl.h/2+b.w){
+      hp-=8;eBuls.splice(i,1);sfxHit();addP(pl.x,pl.y,"#ff6b6b",6);
+      document.getElementById("hpf").style.width=Math.max(0,hp/maxHp*100)+"%";
+      if(hp<=0){die();return}
+    }
+  }
+  spawnT+=dt;if(spawnT>1200&&enemies.length<6+wave*2){spawnT=0;spawnE()}
+  for(var i=enemies.length-1;i>=0;i--){
+    var e=enemies[i];e.y+=e.sp;e.st-=dt;
+    if(e.st<=0){e.st=1500+Math.random()*2000;var dx=pl.x-e.x,dy=pl.y-e.y,len=Math.sqrt(dx*dx+dy*dy)||1;eBuls.push({x:e.x,y:e.y+e.sz,vx:dx/len*2.5,vy:dy/len*2.5,w:4,col:"#ff6b6b"})}
+    if(e.y>H+30){enemies.splice(i,1);continue}
+    for(var j=buls.length-1;j>=0;j--){
+      var b=buls[j];
+      if(Math.abs(b.x-e.x)<e.sz+b.w&&Math.abs(b.y-e.y)<e.sz+b.w){
+        e.hp--;buls.splice(j,1);sfxHit();addP(b.x,b.y,"#fff",3);
+        if(e.hp<=0){score+=e.pts;sfxExplode();addP(e.x,e.y,e.col,12);enemies.splice(i,1);
+          if(Math.random()<.12)pows.push({x:e.x,y:e.y,tp:Math.random()<.5?"h":"s",life:250})}
+        break;
+      }
+    }
+  }
+  for(var i=pows.length-1;i>=0;i--){
+    var p=pows[i];p.y+=1.2;p.life--;
+    if(p.life<=0||p.y>H+15){pows.splice(i,1);continue}
+    if(Math.abs(p.x-pl.x)<pl.w/2+10&&Math.abs(p.y-pl.y)<pl.h/2+10){
+      sfxPower();
+      if(p.tp==="h"){hp=Math.min(maxHp,hp+25);addP(p.x,p.y,"#7bed9f",8)}
+      else addP(p.x,p.y,"#ffd700",8);
+      pows.splice(i,1);document.getElementById("hpf").style.width=Math.max(0,hp/maxHp*100)+"%"
+    }
+  }
+  parts=parts.filter(function(p){p.x+=p.vx;p.y+=p.vy;p.vy+=.04;p.life-=p.dec;return p.life>0});
+  if(enemies.length===0){wave++;spawnT=0;document.getElementById("wv").textContent=wave}
+}
+
+function die(){state="dead";sfxDie();addP(pl.x,pl.y,"#00f5ff",20);if(score>best){best=score;localStorage.setItem("shB",best)}document.getElementById("FS").textContent=score;document.getElementById("FW").textContent=wave;setTimeout(function(){document.getElementById("ov").classList.add("show")},400)}
+
+function draw(){
+  cx.fillStyle="rgba(0,0,0,.12)";cx.fillRect(0,0,W,H);
+  cx.fillStyle="rgba(255,255,255,.2)";
+  for(var i=0;i<50;i++){var sx=(i*97+Date.now()*.02*(i%3+1))%W,sy=(i*73+Date.now()*.01*(i%2+1))%H;cx.fillRect(sx,sy,1,1)}
+  if(state==="play"){
+    cx.save();cx.translate(pl.x,pl.y);cx.fillStyle="#00f5ff";cx.beginPath();cx.moveTo(0,-pl.h/2);cx.lineTo(-pl.w/2,pl.h/2);cx.lineTo(pl.w/4,pl.h/4);cx.lineTo(pl.w/2,pl.h/2);cx.closePath();cx.fill();cx.restore();
+    cx.fillStyle="#00f5ff";cx.shadowColor="#00f5ff";cx.shadowBlur=6;
+    buls.forEach(function(b){cx.fillRect(b.x-b.w/2,b.y-b.h/2,b.w,b.h)});cx.shadowBlur=0;
+    enemies.forEach(function(e){
+      cx.fillStyle=e.col;cx.beginPath();cx.moveTo(e.x,e.y-e.sz);cx.lineTo(e.x-e.sz,e.y+e.sz*.6);cx.lineTo(e.x+e.sz,e.y+e.sz*.6);cx.closePath();cx.fill();
+      if(e.hp<e.mhp){cx.fillStyle="rgba(255,0,0,.5)";cx.fillRect(e.x-e.sz,e.y-e.sz-6,e.sz*2*(e.hp/e.mhp),3)}
+    });
+    cx.fillStyle="#ff6b6b";eBuls.forEach(function(b){cx.beginPath();cx.arc(b.x,b.y,b.w,0,Math.PI*2);cx.fill()});
+    pows.forEach(function(p){
+      var pu=Math.sin(Date.now()*.008)*2;
+      cx.fillStyle=p.tp==="h"?"#7bed9f":"#ffd700";cx.shadowColor=cx.fillStyle;cx.shadowBlur=8+pu;
+      cx.beginPath();cx.arc(p.x,p.y,7+pu,0,Math.PI*2);cx.fill();cx.shadowBlur=0;
+      cx.fillStyle="#fff";cx.font="bold 9px sans-serif";cx.textAlign="center";cx.textBaseline="middle";cx.fillText(p.tp==="h"?"♥":"⚡",p.x,p.y);
+    });
+    parts.forEach(function(p){cx.globalAlpha=p.life;cx.fillStyle=p.col;cx.beginPath();cx.arc(p.x,p.y,p.sz,0,Math.PI*2);cx.fill()});cx.globalAlpha=1;
+  }
+}
+
+var lt=0;function loop(t){var dt=Math.min(t-lt,33);lt=t;update(dt);draw();requestAnimationFrame(loop)}
+
+document.addEventListener("keydown",function(e){keys[e.code]=true;if(e.code==="Space")e.preventDefault()});
+document.addEventListener("keyup",function(e){keys[e.code]=false});
+cv.addEventListener("touchstart",function(e){
+  e.preventDefault();initA();
+  var t=e.touches[0],r=cv.getBoundingClientRect();var x=(t.clientX-r.left)/r.width*W,y=(t.clientY-r.top)/r.height*H;
+  keys.ArrowLeft=x<W*.35;keys.ArrowRight=x>W*.65;keys.ArrowUp=y<H*.4;keys.ArrowDown=y>H*.6;keys.Space=true;
+},{passive:false});
+cv.addEventListener("touchmove",function(e){
+  e.preventDefault();var t=e.touches[0],r=cv.getBoundingClientRect();var x=(t.clientX-r.left)/r.width*W,y=(t.clientY-r.top)/r.height*H;
+  keys.ArrowLeft=x<W*.35;keys.ArrowRight=x>W*.65;keys.ArrowUp=y<H*.4;keys.ArrowDown=y>H*.6;
+},{passive:false});
+cv.addEventListener("touchend",function(){keys.ArrowLeft=keys.ArrowRight=keys.ArrowUp=keys.ArrowDown=keys.Space=false},{passive:true});
+document.getElementById("lB").onmousedown=function(){keys.ArrowLeft=true};document.getElementById("lB").onmouseup=function(){keys.ArrowLeft=false};
+document.getElementById("rB").onmousedown=function(){keys.ArrowRight=true};document.getElementById("rB").onmouseup=function(){keys.ArrowRight=false};
+document.getElementById("uB").onmousedown=function(){keys.ArrowUp=true};document.getElementById("uB").onmouseup=function(){keys.ArrowUp=false};
+document.getElementById("dB").onmousedown=function(){keys.ArrowDown=true};document.getElementById("dB").onmouseup=function(){keys.ArrowDown=false};
+document.getElementById("fB").onmousedown=function(){keys.Space=true};document.getElementById("fB").onmouseup=function(){keys.Space=false};
+document.getElementById("sB").onclick=init;document.getElementById("oB").onclick=init;
+document.getElementById("bst").textContent=best;
+resize();addEventListener("resize",resize);requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
