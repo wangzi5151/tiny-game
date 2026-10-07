@@ -1,0 +1,185 @@
+<!-- 
+  跳跃游戏 (JumpJumpGame)
+  一个基于HTML5的游戏
+  作者: wangzi5151
+  版本: 1.0
+  许可证: MIT License
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>跳一跳</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC',sans-serif}
+body{background:#1a1a2e;display:flex;justify-content:center;align-items:center}
+#W{position:relative;width:100vw;height:100vh;max-width:420px;max-height:780px;overflow:hidden;background:linear-gradient(180deg,#0f0c29,#302b63,#24243e)}
+canvas{display:block;width:100%;height:100%}
+#hud{position:absolute;top:0;left:0;width:100%;padding:20px;display:flex;justify-content:center;z-index:10}
+#sc{font-size:48px;font-weight:800;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+#cb{position:absolute;top:75px;width:100%;text-align:center;font-size:22px;font-weight:700;color:#ffd700;opacity:0;transition:opacity .3s;z-index:10;text-shadow:0 0 16px rgba(255,215,0,.4)}
+#bw{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);width:180px;height:8px;background:rgba(255,255,255,.12);border-radius:4px;overflow:hidden;opacity:0;transition:opacity .3s;z-index:10}
+#bl{width:0%;height:100%;background:linear-gradient(90deg,#667eea,#e94560);border-radius:4px}
+#tip{position:absolute;bottom:50px;width:100%;text-align:center;color:rgba(255,255,255,.35);font-size:13px;z-index:10;animation:tp 2s infinite}
+@keyframes tp{0%,100%{opacity:.35}50%{opacity:.7}}
+.sc{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:20;pointer-events:auto}
+.sc.h{display:none}
+.sc h1{font-size:44px;color:#fff;margin-bottom:8px;text-shadow:0 0 30px rgba(100,126,234,.6)}
+.sc .sub{color:rgba(255,255,255,.45);font-size:14px;letter-spacing:4px;margin-bottom:40px}
+.sc .big{font-size:56px;color:#fff;font-weight:800;margin-bottom:6px}
+.sc .sm{color:rgba(255,255,255,.4);font-size:16px;margin-bottom:30px}
+.btn{padding:15px 55px;font-size:18px;color:#fff;background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:40px;cursor:pointer;font-weight:700;letter-spacing:2px;box-shadow:0 6px 24px rgba(102,126,234,.4);transition:transform .15s}
+.btn:active{transform:scale(.95)}
+</style>
+</head>
+<body>
+<div id="W">
+<canvas id="c"></canvas>
+<div id="hud"><div id="sc">0</div></div>
+<div id="cb"></div>
+<div id="bw"><div id="bl"></div></div>
+<div id="tip">按住蓄力 松手跳跃</div>
+<div class="sc" id="M"><h1>跳一跳</h1><div class="sub">JUMP JUMP</div><button class="btn" id="MB">开始游戏</button></div>
+<div class="sc h" id="O"><div class="big" id="OS">0</div><div class="sm" id="OB">最高分: 0</div><button class="btn" id="OBn">再来一次</button></div>
+</div>
+<script>
+(function(){
+var cv=document.getElementById("c"),cx=cv.getContext("2d"),W0=document.getElementById("W");
+var W,H,dpr;
+function resize(){dpr=Math.min(devicePixelRatio||1,2);var r=W0.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+"px";cv.style.height=H+"px";cx.setTransform(dpr,0,0,dpr,0,0)}
+resize();addEventListener("resize",resize);
+
+var AC;
+function initAudio(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume()}
+function playTone(f,d,t,v){if(!AC)return;var o=AC.createOscillator(),g=AC.createGain();o.type=t||"sine";o.frequency.value=f;g.gain.setValueAtTime(v||.15,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}
+function sfxJump(){playTone(300,.15,"sine",.12);setTimeout(function(){playTone(500,.1,"sine",.08)},50)}
+function sfxLand(){playTone(200,.08,"triangle",.1)}
+function sfxCombo(n){playTone(400+n*80,.2,"sine",.1)}
+function sfxDie(){playTone(200,.3,"sawtooth",.08);setTimeout(function(){playTone(120,.4,"sawtooth",.06)},100)}
+
+var score=0,best=+localStorage.getItem("jjB")||0;
+var state="menu",charging=false,power=0;
+var plats=[],curIdx=0;
+var player={x:0,y:0,vx:0,vy:0,jumping:false,squash:1,stretch:1};
+var particles=[],shakeX=0,shakeY=0,shakeT=0;
+var GRAVITY=.45;
+
+function mkPlat(px,py){
+  var dir=Math.random()>.5?1:-1;
+  var dist=Math.min(70+Math.random()*120+curIdx*1.5,230);
+  return{x:px+dist*dir,y:py-40-Math.random()*40,w:55+Math.random()*40,h:18,hue:200+Math.random()*80,done:false};
+}
+
+function init(){
+  initAudio();score=0;curIdx=0;plats=[];particles=[];shakeT=0;
+  var f={x:W/2,y:H*.65,w:90,h:18,hue:240,done:true};
+  plats.push(f);var p=f;
+  for(var i=0;i<6;i++){plats.push(mkPlat(p.x,p.y));p=plats[plats.length-1]}
+  player.x=f.x;player.y=f.y-25;player.vy=0;player.jumping=false;player.squash=1;player.stretch=1;
+  document.getElementById("sc").textContent="0";document.getElementById("cb").style.opacity="0";
+  state="ready";
+}
+
+function startCharge(){if(state!=="ready")return;initAudio();charging=true;power=0;document.getElementById("bw").style.opacity="1";document.getElementById("tip").style.opacity="0";player.squash=.85;player.stretch=1.15}
+
+function releaseCharge(){if(!charging)return;charging=false;document.getElementById("bw").style.opacity="0";var p=Math.max(.08,power);var jv=6+p*16;var dir=plats[curIdx+1].x>player.x?1:-1;player.vx=dir*(2+p*7);player.vy=-jv;player.jumping=true;sfxJump();spawnP(player.x,player.y+10,8,"#667eea")}
+
+function spawnP(x,y,n,col){for(var i=0;i<n;i++)particles.push({x:x,y:y,vx:(Math.random()-.5)*5,vy:-Math.random()*4-1,life:1,dec:.015+Math.random()*.025,sz:2+Math.random()*3.5,col:col,grav:.08})}
+
+function shake(d){shakeT=d;shakeX=(Math.random()-.5)*d;shakeY=(Math.random()-.5)*d}
+
+function die(){state="over";sfxDie();shake(15);if(score>best){best=score;localStorage.setItem("jjB",best)}document.getElementById("OS").textContent=score;document.getElementById("OB").textContent="最高分: "+best;setTimeout(function(){document.getElementById("O").classList.remove("h")},300)}
+
+function update(){
+  if(charging){power=Math.min(power+.008,1);document.getElementById("bl").style.width=(power*100)+"%"}
+  if(state!=="playing")return;
+  if(player.jumping){
+    player.vy+=GRAVITY;player.x+=player.vx;player.y+=player.vy;
+    var cp=plats[curIdx+1];
+    if(cp&&player.vy>0){
+      var dx=player.x-cp.x,dy=player.y-cp.y;
+      if(Math.abs(dx)<cp.w/2+8&&dy>=-5&&dy<=cp.h+5){
+        player.jumping=false;player.vy=0;player.vx=0;player.y=cp.y-25;
+        player.squash=1.35;player.stretch=.65;sfxLand();shake(6);
+        if(!cp.done){
+          cp.done=true;curIdx++;score++;sfxCombo(score);
+          document.getElementById("sc").textContent=score;
+          spawnP(player.x,player.y+15,15,"#ffd700");
+          var cb=document.getElementById("cb");
+          if(score>1){cb.textContent=score+"连跳!";cb.style.opacity="1";setTimeout(function(){cb.style.opacity="0"},1200)}
+        }
+        while(plats[curIdx+1]&&plats[curIdx+1].x>player.x-W*.6&&plats[curIdx+2]&&plats[curIdx+2].x>player.x-W*.6)shiftP();
+        if(!plats[curIdx+1])plats.push(mkPlat(plats[plats.length-1].x,plats[plats.length-1].y));
+      }
+    }
+    if(player.y>300&&player.vy>0){die();return}
+  }
+  player.squash+=(1-player.squash)*.12;player.stretch+=(1-player.stretch)*.12;
+  if(shakeT>0){shakeT--;shakeX=(Math.random()-.5)*shakeT;shakeY=(Math.random()-.5)*shakeT}else{shakeX=0;shakeY=0}
+}
+
+function shiftP(){
+  var s=plats[1].x-plats[0].x,sy=plats[1].y-plats[0].y;
+  for(var i=0;i<plats.length;i++){plats[i].x-=s;plats[i].y-=sy}
+  player.x-=s;player.y-=sy;curIdx--;
+}
+
+function draw(){
+  cx.save();cx.translate(shakeX,shakeY);
+  cx.clearRect(-10,-10,W+20,H+20);
+  var camY=H*.45-player.y;
+  cx.fillStyle="rgba(255,255,255,.015)";
+  for(var i=0;i<25;i++){var sx=(i*97+Date.now()*.008)%W,sy=(i*67+Date.now()*.005)%H;cx.beginPath();cx.arc(sx,sy,Math.sin(Date.now()*.002+i)*.8+.5,0,Math.PI*2);cx.fill()}
+  for(var i=0;i<plats.length;i++){
+    var p=plats[i],px=p.x,py=p.y+camY;
+    if(py<-40||py>H+40)continue;
+    cx.save();
+    var g=cx.createLinearGradient(px-p.w/2,py-p.h,px-p.w/2,py+p.h);
+    g.addColorStop(0,"hsl("+p.hue+",70%,65%)");g.addColorStop(1,"hsl("+p.hue+",70%,45%)");
+    cx.fillStyle=g;
+    cx.beginPath();
+    var r=5;
+    cx.moveTo(px-p.w/2+r,py-p.h);cx.lineTo(px+p.w/2-r,py-p.h);cx.quadraticCurveTo(px+p.w/2,py-p.h,px+p.w/2,py-p.h+r);
+    cx.lineTo(px+p.w/2,py+p.h-r);cx.quadraticCurveTo(px+p.w/2,py+p.h,px+p.w/2-r,py+p.h);
+    cx.lineTo(px-p.w/2+r,py+p.h);cx.quadraticCurveTo(px-p.w/2,py+p.h,px-p.w/2,py+p.h-r);
+    cx.lineTo(px-p.w/2,py-p.h+r);cx.quadraticCurveTo(px-p.w/2,py-p.h,px-p.w/2+r,py-p.h);
+    cx.closePath();cx.fill();
+    cx.strokeStyle="hsla("+p.hue+",70%,80%,.4)";cx.lineWidth=1;cx.stroke();
+    var sh=cx.createLinearGradient(px-p.w/2,py-p.h,px+p.w/2,py-p.h);
+    sh.addColorStop(0,"rgba(255,255,255,0)");sh.addColorStop(.5,"rgba(255,255,255,.12)");sh.addColorStop(1,"rgba(255,255,255,0)");
+    cx.fillStyle=sh;cx.fillRect(px-p.w/2,py-p.h,p.w,p.h);
+    cx.restore();
+  }
+  var ppx=player.x,ppy=player.y+camY;
+  cx.save();cx.translate(ppx,ppy);cx.scale(player.squash,player.stretch);
+  var bg=cx.createLinearGradient(0,-15,0,15);bg.addColorStop(0,"#ff6b6b");bg.addColorStop(1,"#ee5a24");
+  cx.fillStyle=bg;cx.beginPath();cx.ellipse(0,0,11,15,0,0,Math.PI*2);cx.fill();
+  cx.fillStyle="rgba(255,255,255,.2)";cx.beginPath();cx.ellipse(-3,-5,4,3,-.3,0,Math.PI*2);cx.fill();
+  cx.fillStyle="#fff";cx.beginPath();cx.arc(-3,-3,2.5,0,Math.PI*2);cx.fill();cx.beginPath();cx.arc(3,-3,2.5,0,Math.PI*2);cx.fill();
+  cx.fillStyle="#333";cx.beginPath();cx.arc(-3,-3,1.2,0,Math.PI*2);cx.fill();cx.beginPath();cx.arc(3,-3,1.2,0,Math.PI*2);cx.fill();
+  cx.restore();
+  for(var i=0;i<particles.length;i++){
+    var q=particles[i];q.x+=q.vx;q.y+=q.vy;q.vy+=q.grav;q.life-=q.dec;
+    cx.globalAlpha=Math.max(0,q.life);cx.fillStyle=q.col;cx.beginPath();cx.arc(q.x,q.y+camY,q.sz*q.life,0,Math.PI*2);cx.fill();
+  }
+  cx.globalAlpha=1;particles=particles.filter(function(p){return p.life>0});
+  cx.restore();
+}
+
+var lt=0;
+function loop(t){var dt=Math.min((t-lt)/16,3);lt=t;update();draw();requestAnimationFrame(loop)}
+
+cv.addEventListener("mousedown",function(e){e.preventDefault();startCharge()});
+cv.addEventListener("mouseup",function(e){e.preventDefault();releaseCharge()});
+cv.addEventListener("touchstart",function(e){e.preventDefault();startCharge()},{passive:false});
+cv.addEventListener("touchend",function(e){e.preventDefault();releaseCharge()},{passive:false});
+
+document.getElementById("MB").onclick=function(){document.getElementById("M").classList.add("h");init();state="playing"};
+document.getElementById("OBn").onclick=function(){document.getElementById("O").classList.add("h");init();state="playing"};
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
