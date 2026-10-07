@@ -1,0 +1,132 @@
+<!-- 
+  Flappy Bird游戏 (FlappyBirdGame)
+  一个基于HTML5的游戏
+  作者: wangzi5151
+  版本: 1.0
+  许可证: MIT License
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>飞扬的小鸟</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC',sans-serif}
+body{background:#4ec0ca;display:flex;justify-content:center;align-items:center}
+#W{position:relative;width:100vw;height:100vh;max-width:390px;max-height:680px;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+#sc{position:absolute;top:40px;width:100%;text-align:center;font-size:56px;font-weight:800;color:#fff;text-shadow:0 3px 0 #543847;z-index:10}
+.s{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:20;pointer-events:auto}
+.s.h{display:none}
+.s h1{font-size:38px;color:#fff;text-shadow:0 3px 0 #543847;margin-bottom:6px}
+.s .sub{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:35px;letter-spacing:2px}
+.s .big{font-size:48px;color:#fff;font-weight:800;text-shadow:0 3px 0 #543847;margin-bottom:4px}
+.s .sm{font-size:16px;color:rgba(255,255,255,.6);margin-bottom:20px}
+.btn{padding:13px 48px;font-size:17px;color:#fff;background:#73bf2e;border:none;border-radius:28px;cursor:pointer;font-weight:700;box-shadow:0 4px 0 #5a9a23;transition:transform .1s}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 #5a9a23}
+.medal{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:12px}
+.mg{background:linear-gradient(135deg,#ffd700,#ffaa00);box-shadow:0 0 16px rgba(255,215,0,.5)}
+.ms{background:linear-gradient(135deg,#c0c0c0,#a0a0a0)}
+.mb{background:linear-gradient(135deg,#cd7f32,#a0522d)}
+</style>
+</head>
+<body>
+<div id="W">
+<canvas id="c"></canvas>
+<div id="sc">0</div>
+<div class="s" id="M"><h1>飞扬的小鸟</h1><div class="sub">FLAPPY BIRD</div><button class="btn" id="MB">开始游戏</button></div>
+<div class="s h" id="O"><div class="medal" id="md"></div><div class="big" id="FS">0</div><div class="sm" id="FB">最高分: 0</div><button class="btn" id="OB">再来一次</button></div>
+</div>
+<script>
+(function(){
+var cv=document.getElementById("c"),cx=cv.getContext("2d"),W0=document.getElementById("W");
+var W,H;
+function resize(){var r=W0.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*2;cv.height=H*2;cv.style.width=W+"px";cv.style.height=H+"px";cx.scale(2,2)}
+resize();
+
+var AC;function initA(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume()}
+function tone(f,d,t,v){if(!AC)return;var o=AC.createOscillator(),g=AC.createGain();o.type=t||"sine";o.frequency.value=f;g.gain.setValueAtTime(v||.1,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}
+function sfxFlap(){tone(600,.08,"sine",.08)}
+function sfxPoint(){tone(880,.12,"sine",.1)}
+function sfxHit(){tone(250,.15,"square",.08)}
+function sfxDie(){tone(180,.3,"sawtooth",.06)}
+
+var score=0,best=+localStorage.getItem("fbB")||0;
+var state="menu",frame=0;
+var GRAVITY=.38,FLAP=-6.2,GAP=140,PIPE_W=56,SPEED=2.2,GND_H=70;
+var bird,pipes,gndOff=0,particles=[];
+
+function reset(){score=0;bird={x:W*.28,y:H/2,vy:0,rot:0,wing:0};pipes=[];gndOff=0;particles=[];document.getElementById("sc").textContent="0";document.getElementById("O").classList.add("h");document.getElementById("M").classList.add("h")}
+
+function flap(){
+  if(state==="menu"){initA();state="play";reset();bird.vy=FLAP;sfxFlap();return}
+  if(state==="dead"){state="play";reset();bird.vy=FLAP;sfxFlap();return}
+  if(state==="play"){bird.vy=FLAP;sfxFlap();bird.wing=8}
+}
+
+function die(){state="dead";sfxDie();sfxHit();if(score>best){best=score;localStorage.setItem("fbB",best)}document.getElementById("FS").textContent=score;document.getElementById("FB").textContent="最高分: "+best;var m=document.getElementById("md");if(score>=40){m.className="medal mg";m.textContent="🥇"}else if(score>=20){m.className="medal ms";m.textContent="🥈"}else if(score>=10){m.className="medal mb";m.textContent="🥉"}else{m.style.display="none"}setTimeout(function(){document.getElementById("O").classList.remove("h")},400)}
+
+function addP(x,y,col,n){for(var i=0;i<n;i++)particles.push({x:x,y:y,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4-2,life:1,dec:.03+Math.random()*.02,sz:Math.random()*3+1,col:col})}
+
+function addPipe(){var minT=70,maxT=H-GND_H-GAP-70;var topH=minT+Math.random()*(maxT-minT);pipes.push({x:W+10,topH:topH,scored:false})}
+
+function update(){
+  frame++;
+  if(state==="play"){
+    bird.vy+=GRAVITY;bird.y+=bird.vy;
+    bird.rot=Math.min(Math.max(bird.vy*.06,-.4),Math.PI/2);
+    bird.wing=Math.max(0,bird.wing-1);
+    gndOff=(gndOff+SPEED)%40;
+    if(frame%85===0)addPipe();
+    for(var i=pipes.length-1;i>=0;i--){
+      pipes[i].x-=SPEED;
+      if(pipes[i].x+PIPE_W<-10){pipes.splice(i,1);continue}
+      if(!pipes[i].scored&&pipes[i].x+PIPE_W<bird.x){pipes[i].scored=true;score++;sfxPoint();document.getElementById("sc").textContent=score;addP(bird.x,bird.y,10,"#ffd700")}
+      var p=pipes[i];
+      if(bird.x+13>p.x&&bird.x-13<p.x+PIPE_W){if(bird.y-13<p.topH||bird.y+13>p.topH+GAP){die();return}}
+    }
+    if(bird.y+13>H-GND_H||bird.y-13<0){die();return}
+  }else if(state==="menu"){bird.y=H/2+Math.sin(frame*.04)*12}
+  else if(state==="dead"){bird.vy+=GRAVITY;bird.y+=bird.vy;bird.rot=Math.min(bird.rot+.08,Math.PI/2);if(bird.y+13>H-GND_H){bird.y=H-GND_H-13;bird.vy=0}}
+}
+
+function draw(){
+  cx.clearRect(0,0,W,H);
+  var grad=cx.createLinearGradient(0,0,0,H);grad.addColorStop(0,"#4ec0ca");grad.addColorStop(.8,"#e8c170");grad.addColorStop(1,"#d2a650");
+  cx.fillStyle=grad;cx.fillRect(0,0,W,H);
+  cx.fillStyle="rgba(255,255,255,.4)";
+  for(var i=0;i<4;i++){var cx2=((i*180+frame*.2)%(W+160))-80;cx.beginPath();cx.arc(cx2,35+i*35,22,0,Math.PI*2);cx.arc(cx2+18,28+i*35,18,0,Math.PI*2);cx.arc(cx2+36,35+i*35,20,0,Math.PI*2);cx.fill()}
+  for(var i=0;i<pipes.length;i++){
+    var p=pipes[i];
+    var grd=cx.createLinearGradient(p.x,0,p.x+PIPE_W,0);grd.addColorStop(0,"#5a9a23");grd.addColorStop(.3,"#73bf2e");grd.addColorStop(.7,"#73bf2e");grd.addColorStop(1,"#5a9a23");
+    cx.fillStyle=grd;cx.fillRect(p.x,0,PIPE_W,p.topH);cx.fillRect(p.x,p.topH+GAP,PIPE_W,H-p.topH-GAP-GND_H);
+    cx.fillStyle="#5a9a23";cx.fillRect(p.x-5,p.topH-28,PIPE_W+10,28);cx.fillRect(p.x-5,p.topH+GAP,PIPE_W+10,28);
+    cx.fillStyle="rgba(255,255,255,.1)";cx.fillRect(p.x+6,0,7,p.topH);cx.fillRect(p.x+6,p.topH+GAP,7,H-p.topH-GAP-GND_H);
+  }
+  cx.save();cx.translate(bird.x,bird.y);cx.rotate(bird.rot);
+  cx.fillStyle="#f7dc6f";cx.beginPath();cx.ellipse(0,0,15,12,0,0,Math.PI*2);cx.fill();cx.strokeStyle="#d4a017";cx.lineWidth=1.2;cx.stroke();
+  if(bird.wing>0){cx.fillStyle="#e8b830";cx.beginPath();cx.ellipse(-5,3+Math.sin(bird.wing*.5)*4,8,3,-.2,0,Math.PI*2);cx.fill()}
+  cx.fillStyle="#fff";cx.beginPath();cx.ellipse(5,-3,6,5,0,0,Math.PI*2);cx.fill();cx.fillStyle="#2c3e50";cx.beginPath();cx.arc(6,-3,2.5,0,Math.PI*2);cx.fill();cx.fillStyle="#fff";cx.beginPath();cx.arc(7,-4,.8,0,Math.PI*2);cx.fill();
+  cx.fillStyle="#e67e22";cx.beginPath();cx.moveTo(13,-1);cx.lineTo(20,1);cx.lineTo(13,3);cx.closePath();cx.fill();
+  cx.restore();
+  cx.fillStyle="#d2a650";cx.fillRect(0,H-GND_H,W,GND_H);
+  cx.fillStyle="#c49640";for(var x=-gndOff;x<W;x+=40){cx.fillRect(x,H-GND_H,18,7);cx.fillRect(x+18,H-GND_H+7,18,7)}
+  cx.fillStyle="#73bf2e";cx.fillRect(0,H-GND_H,W,3);
+  for(var i=0;i<particles.length;i++){var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.08;p.life-=p.dec;cx.globalAlpha=p.life;cx.fillStyle=p.col;cx.beginPath();cx.arc(p.x,p.y,p.sz,0,Math.PI*2);cx.fill()}cx.globalAlpha=1;
+  particles=particles.filter(function(p){return p.life>0});
+}
+
+var lt=0;
+function loop(t){update();draw();requestAnimationFrame(loop)}
+cv.addEventListener("mousedown",function(e){e.preventDefault();flap()});
+cv.addEventListener("touchstart",function(e){e.preventDefault();flap()},{passive:false});
+addEventListener("keydown",function(e){if(e.code==="Space"||e.code==="ArrowUp"){e.preventDefault();flap()}});
+document.getElementById("MB").onclick=flap;document.getElementById("OB").onclick=flap;
+bird={x:W*.28,y:H/2,vy:0,rot:0,wing:0};pipes=[];
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
