@@ -1,0 +1,137 @@
+<!-- 
+  三消游戏 (Match3Game)
+  一个基于HTML5的游戏
+  作者: wangzi5151
+  版本: 1.0
+  许可证: MIT License
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>消消乐</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC',sans-serif}
+body{background:#1a0a2e;display:flex;justify-content:center;align-items:center}
+#A{position:relative;width:100vw;height:100vh;max-width:420px;max-height:760px;display:flex;flex-direction:column;background:linear-gradient(180deg,#1a0a2e,#16213e)}
+.hd{display:flex;justify-content:space-between;padding:14px 18px;z-index:10}
+.pn{background:rgba(22,33,62,.8);border-radius:8px;padding:6px 14px;text-align:center}
+.pn .l{font-size:9px;color:#8b7aa8;text-transform:uppercase}
+.pn .v{font-size:20px;font-weight:700;color:#ffd700}
+.bw{flex:1;display:flex;justify-content:center;align-items:center;padding:8px}
+.bd{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;padding:10px;background:rgba(10,10,30,.5);border-radius:14px}
+.g{aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;transition:all .12s}
+.g:active{transform:scale(.88)}
+.g.sel{animation:pulse .5s infinite;box-shadow:0 0 16px rgba(255,215,0,.5)}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.g0{background:linear-gradient(135deg,#ff6b6b,#ee5a24)}.g1{background:linear-gradient(135deg,#48dbfb,#0abde3)}
+.g2{background:linear-gradient(135deg,#feca57,#ff9f43)}.g3{background:linear-gradient(135deg,#ff9ff3,#f368e0)}
+.g4{background:linear-gradient(135deg,#55efc4,#00b894)}.g5{background:linear-gradient(135deg,#a29bfe,#6c5ce7)}
+.mb{padding:0 18px 10px;display:flex;align-items:center;gap:10px}
+.mb .bar{flex:1;height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.mb .fill{height:100%;background:linear-gradient(90deg,#ff6b6b,#ffd700);border-radius:3px;transition:width .3s}
+.mb .txt{color:rgba(255,255,255,.4);font-size:12px}
+.ov{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:center;align-items:center;background:rgba(10,10,30,.9);z-index:30}
+.ov.show{display:flex}
+.ov h2{font-size:30px;color:#ffd700;margin-bottom:8px}
+.ov .sc{font-size:44px;color:#fff;font-weight:800;margin-bottom:22px}
+.ov button{padding:12px 46px;font-size:17px;color:#1a0a2e;background:linear-gradient(135deg,#ffd700,#ff9f43);border:none;border-radius:28px;cursor:pointer;font-weight:700;transition:transform .1s}
+.ov button:active{transform:scale(.95)}
+.ct{position:fixed;font-size:26px;font-weight:800;color:#ffd700;text-shadow:0 0 16px rgba(255,215,0,.4);pointer-events:none;z-index:50;animation:ca .8s ease forwards}
+@keyframes ca{0%{opacity:1;transform:scale(.5) translateY(0)}50%{opacity:1;transform:scale(1.15) translateY(-16px)}100%{opacity:0;transform:scale(1) translateY(-50px)}}
+</style>
+</head>
+<body>
+<div id="A">
+<div class="hd">
+<div class="pn"><div class="l">分数</div><div class="v" id="sc">0</div></div>
+<div class="pn"><div class="l">目标</div><div class="v" id="tg">1000</div></div>
+<div class="pn"><div class="l">最高</div><div class="v" id="bst">0</div></div>
+</div>
+<div class="bw"><div class="bd" id="bd"></div></div>
+<div class="mb"><span class="txt" id="mt">步数: 30</span><div class="bar"><div class="fill" id="mf" style="width:100%"></div></div></div>
+<div class="ov" id="st"><h2>✨ 消消乐</h2><p style="color:rgba(255,255,255,.4);margin-bottom:22px">交换相邻宝石 三个以上消除</p><button id="sB">开始游戏</button></div>
+<div class="ov" id="wO"><h2>🎉 过关!</h2><div class="sc" id="wS">0</div><button id="wB">下一关</button></div>
+<div class="ov" id="lO"><h2>😢 步数用完</h2><div class="sc" id="lS">0</div><button id="lB">再来一次</button></div>
+</div>
+<script>
+(function(){
+var ROWS=8,COLS=8,NG=6;
+var EMO=["🔴","🔵","🟡","🟣","🟢","🟠"];
+var bdEl=document.getElementById("bd"),scEl=document.getElementById("sc"),tgEl=document.getElementById("tg");
+var mtEl=document.getElementById("mt"),mfEl=document.getElementById("mf");
+var grid,sel,locked,score,moves,target,level,best=+localStorage.getItem("m3B")||0,combo;
+var AC;function initA(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume()}
+function tone(f,d,t,v){if(!AC)return;var o=AC.createOscillator(),g=AC.createGain();o.type=t||"sine";o.frequency.value=f;g.gain.setValueAtTime(v||.08,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}
+function sfxSwap(){tone(400,.06,"sine",.06)}
+function sfxMatch(n){for(var i=0;i<n;i++)setTimeout(function(){tone(500+i*80,.1,"sine",.08)},i*40)}
+function sfxInvalid(){tone(200,.08,"sawtooth",.04)}
+
+function init(){
+  initA();score=0;moves=30;target=1000+level*500;combo=0;
+  scEl.textContent="0";tgEl.textContent=target;mtEl.textContent="步数: "+moves;mfEl.style.width="100%";
+  sel=null;locked=false;
+  do{mkG()}while(findM().length>0);draw();
+  ["st","wO","lO"].forEach(function(id){document.getElementById(id).classList.remove("show")});
+}
+
+function mkG(){grid=[];for(var r=0;r<ROWS;r++){grid[r]=[];for(var c=0;c<COLS;c++){var g;do{g=Math.floor(Math.random()*NG)}while((c>=2&&grid[r][c-1]===g&&grid[r][c-2]===g)||(r>=2&&grid[r-1][c]===g&&grid[r-2][c]===g));grid[r][c]=g}}}
+
+function findM(){
+  var m=new Set();
+  for(var r=0;r<ROWS;r++)for(var c=0;c<COLS-2;c++){var g=grid[r][c];if(g<0)continue;if(grid[r][c+1]===g&&grid[r][c+2]===g){m.add(r+","+c);m.add(r+","+(c+1));m.add(r+","+(c+2));var k=c+3;while(k<COLS&&grid[r][k]===g){m.add(r+","+k);k++}}}
+  for(var c=0;c<COLS;c++)for(var r=0;r<ROWS-2;r++){var g=grid[r][c];if(g<0)continue;if(grid[r+1][c]===g&&grid[r+2][c]===g){m.add(r+","+c);m.add((r+1)+","+c);m.add((r+2)+","+c);var k=r+3;while(k<ROWS&&grid[k][c]===g){m.add(k+","+c);k++}}}
+  return Array.from(m).map(function(s){var p=s.split(",");return{r:+p[0],c:+p[1]}});
+}
+
+function drop(){for(var c=0;c<COLS;c++){var w=ROWS-1;for(var r=ROWS-1;r>=0;r--)if(grid[r][c]>=0){grid[w][c]=grid[r][c];w--}for(var r=w;r>=0;r--)grid[r][c]=Math.floor(Math.random()*NG)}}
+function isAdj(r1,c1,r2,c2){return Math.abs(r1-r2)+Math.abs(c1-c2)===1}
+function sw(r1,c1,r2,c2){var t=grid[r1][c1];grid[r1][c1]=grid[r2][c2];grid[r2][c2]=t}
+
+async function tap(r,c){
+  if(locked)return;
+  if(!sel){sel={r:r,c:c};draw();return}
+  if(!isAdj(sel.r,sel.c,r,c)){sel={r:r,c:c};draw();return}
+  locked=true;sw(sel.r,sel.c,r,c);sfxSwap();
+  var m=findM();
+  if(m.length===0){sw(sel.r,sel.c,r,c);sfxInvalid();sel=null;locked=false;draw();return}
+  moves--;mtEl.textContent="步数: "+moves;mfEl.style.width=(moves/30*100)+"%";
+  combo=0;await process();sel=null;
+  if(score>=target)setTimeout(function(){document.getElementById("wS").textContent=score;document.getElementById("wO").classList.add("show")},250);
+  else if(moves<=0)setTimeout(function(){document.getElementById("lS").textContent=score;document.getElementById("lO").classList.add("show")},250);
+  locked=false;
+}
+
+async function process(){
+  var m=findM();
+  while(m.length>0){
+    combo++;sfxMatch(m.length);
+    score+=m.length*10*combo;
+    if(score>best){best=score;localStorage.setItem("m3B",best);document.getElementById("bst").textContent=best}
+    scEl.textContent=score;
+    if(m.length>=4)showC(m.length);
+    m.forEach(function(p){grid[p.r][p.c]=-1});draw();await dl(260);drop();draw();await dl(160);
+    m=findM();
+  }
+}
+
+function showC(n){var d=document.createElement("div");d.className="ct";d.textContent=(n>=5?"超棒! x":"连击! x")+n;d.style.left="50%";d.style.top="38%";d.style.transform="translateX(-50%)";document.body.appendChild(d);setTimeout(function(){d.remove()},800)}
+function dl(ms){return new Promise(function(r){setTimeout(r,ms)})}
+
+function draw(){
+  bdEl.innerHTML="";
+  for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++){
+    var g=grid[r][c],el=document.createElement("div");el.className="g"+(g>=0?" g"+g:"");
+    if(g>=0)el.textContent=EMO[g];if(sel&&sel.r===r&&sel.c===c)el.classList.add("sel");
+    (function(rr,cc){el.addEventListener("click",function(){tap(rr,cc)})})(r,c);bdEl.appendChild(el);
+  }
+}
+
+document.getElementById("sB").onclick=init;document.getElementById("wB").onclick=function(){level++;init()};document.getElementById("lB").onclick=function(){level=1;init()};
+document.getElementById("bst").textContent=best;init();
+})();
+</script>
+</body>
+</html>
