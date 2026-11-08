@@ -1,6 +1,6 @@
 # 🎮 高阶益智游戏合集
 
-20款益智 / 对战 / 记忆 / 策略休闲游戏，纯 HTML/CSS/JS 实现，零依赖。
+20 款益智 / 对战 / 记忆 / 策略休闲游戏，纯 HTML/CSS/JS 实现，零依赖。
 
 ## 游戏列表
 
@@ -31,8 +31,16 @@
 
 - 零依赖，纯前端实现
 - 响应式设计，支持手机端
-- 统一游戏框架
-- 20款游戏全部可玩
+- 统一游戏框架，所有定时器统一登记并在返回/切换游戏时清理
+- 20 款游戏全部可玩
+- PWA 支持：可安装到主屏幕，离线打开
+
+## 攻防对战规则
+
+- ✊ 石头克 ✌️ 剪刀，✌️ 剪刀克 🖐️ 布，🖐️ 布克 ✊ 石头
+- 克制对手：造成 20 + 连击加成伤害
+- 平局：双方各受 15 点伤害
+- 🛡️ 防御：本回合不造成伤害，受到的攻击伤害减半（20 → 10）
 
 ## 单文件小游戏
 
@@ -46,3 +54,24 @@
 | 跳一跳 | [games/jump-jump.html](games/jump-jump.html) | 贪吃蛇 | [games/snake.html](games/snake.html) |
 | 消消乐 | [games/match-3.html](games/match-3.html) | 太空射击 | [games/space-shooter.html](games/space-shooter.html) |
 | 翻牌记忆 | [games/memory.html](games/memory.html) | 俄罗斯方块 | [games/tetris.html](games/tetris.html) |
+
+## PWA 离线使用
+
+- `manifest.webmanifest` 定义应用名称、图标与独立窗口模式
+- `sw.js` 预缓存主页面、清单、图标与 12 款单文件小游戏
+- 通过 HTTP(S) 打开后会自动注册 Service Worker，断网也能继续玩
+- 本地直接用 `file://` 打开时不会注册 Service Worker，不影响单文件玩法
+
+## 开发与校验
+
+零依赖自动化校验，检查游戏入口、内联脚本语法、DOM id 引用、定时器注册与 PWA 文件：
+
+```bash
+npm test        # 或 npm run validate
+```
+
+GitHub Actions 会在 push / pull request 时自动执行同一套校验。
+
+## 许可证
+
+MIT License，详见 [LICENSE](LICENSE)。

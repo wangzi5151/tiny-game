@@ -2,7 +2,7 @@
   多游戏合集 (tiny-game)
   一个基于HTML5的游戏
   作者: wangzi5151
-  版本: 1.0
+  版本: 1.1.0
   许可证: MIT License
 -->
 <!DOCTYPE html>
@@ -11,6 +11,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>高阶益智游戏合集</title>
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="description" content="20 款益智 / 对战 / 记忆 / 策略休闲游戏，零依赖纯前端实现。">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/icon.svg">
     <style>
         :root {
             --primary: #6c5ce7;
@@ -654,7 +659,7 @@
                         t.className = "tip tip-err"; t.textContent = "✗ 答案: " + correct.n;
                     }
                     t.textContent += "  得分: " + score + "/" + round;
-                    setTimeout(next, 1200);
+                    addTimer(setTimeout(next, 1200));
                 });
                 gc.appendChild(b);
             });
@@ -801,7 +806,7 @@
                 if (inp.value === target) {
                     idx++;
                     t.className = "tip tip-ok"; t.textContent = "✓ 正确！";
-                    setTimeout(next, 1000);
+                    addTimer(setTimeout(next, 1000));
                 } else {
                     t.className = "tip tip-err"; t.textContent = "✗ 不一致，请重试";
                 }
@@ -984,7 +989,7 @@
                     t.className = "tip tip-err"; t.textContent = "✗ 错误";
                 }
                 sc.textContent = "得分: " + score + " | 连击: " + combo;
-                setTimeout(next, 1000);
+                addTimer(setTimeout(next, 1000));
             }
             btnL.addEventListener("click", function() { check("left"); });
             btnE.addEventListener("click", function() { check("equal"); });
@@ -1004,17 +1009,8 @@
         var ta = document.createElement("textarea");
         ta.className = "input";
         ta.style.cssText = "width:90%;max-width:400px;height:120px;resize:vertical;";
-        ta.placeholder = "每行一个名字
-例如:
-张三
-李四
-王五";
-        ta.value = "张三
-李四
-王五
-赵六
-孙七
-周八";
+        ta.placeholder = "每行一个名字\n例如:\n张三\n李四\n王五";
+        ta.value = "张三\n李四\n王五\n赵六\n孙七\n周八";
         var btn = document.createElement("button");
         btn.className = "btn btn-green";
         btn.textContent = "🎫 抽签";
@@ -1027,8 +1023,7 @@
         gc.appendChild(result);
         gc.appendChild(t);
         btn.addEventListener("click", function() {
-            var names = ta.value.split("
-").map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
+            var names = ta.value.split("\n").map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
             if (names.length < 2) { t.className = "tip tip-err"; t.textContent = "至少输入2个名字"; return; }
             btn.disabled = true;
             var step = 0;
@@ -1196,7 +1191,7 @@
                         if (o === ch.a) { score++; t.className = "tip tip-ok"; t.textContent = "✓ 正确！"; }
                         else { t.className = "tip tip-err"; t.textContent = "✗ 答案: " + ch.a; }
                         level++;
-                        setTimeout(nextLevel, 1000);
+                        addTimer(setTimeout(nextLevel, 1000));
                     });
                     gc.appendChild(b);
                 });
@@ -1212,7 +1207,7 @@
                     if (inp.value === ch.a) { score++; t.className = "tip tip-ok"; t.textContent = "✓ 正确！"; }
                     else { t.className = "tip tip-err"; t.textContent = "✗ 答案: " + ch.a; }
                     level++;
-                    setTimeout(nextLevel, 1000);
+                    addTimer(setTimeout(nextLevel, 1000));
                 });
                 inp.addEventListener("keydown", function(e) { if (e.key === "Enter") btn.click(); });
                 gc.appendChild(inp);
@@ -1230,14 +1225,7 @@
         ta.className = "input";
         ta.style.cssText = "width:90%;max-width:400px;height:100px;resize:vertical;";
         ta.placeholder = "每行一个名字";
-        ta.value = "张三
-李四
-王五
-赵六
-孙七
-周八
-吴九
-郑十";
+        ta.value = "张三\n李四\n王五\n赵六\n孙七\n周八\n吴九\n郑十";
         var grpInp = document.createElement("input");
         grpInp.className = "input";
         grpInp.type = "number";
@@ -1255,8 +1243,7 @@
         gc.appendChild(btn);
         gc.appendChild(result);
         btn.addEventListener("click", function() {
-            var names = ta.value.split("
-").map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
+            var names = ta.value.split("\n").map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
             var g = parseInt(grpInp.value, 10);
             if (names.length < g) { result.innerHTML = '<p class="tip tip-err">人数不够分组</p>'; return; }
             for (var i = names.length - 1; i > 0; i--) {
@@ -1281,7 +1268,8 @@
     /* ========== Game 20: 攻防对战 ========== */
     gameFns[20] = function() {
         var pH = 100, eH = 100, pCombo = 0;
-        gc.innerHTML = '<h2>🛡️ 攻防对战</h2><p class="rule">选择招式，克制对方！<br>✊克✌️ 克🖐️ 克✊ | 防御减半伤害</p>';
+        var BASE_DMG = 20, DEFEND_REDUCTION = 0.5;
+        gc.innerHTML = '<h2>🛡️ 攻防对战</h2><p class="rule">选择招式，克制对方！<br>✊ 克 ✌️，✌️ 克 🖐️，🖐️ 克 ✊<br>🛡️ 防御：本回合不造成伤害，受到的攻击伤害减半</p>';
         var show = document.createElement("div");
         show.className = "big-text";
         show.textContent = "⚔️";
@@ -1313,19 +1301,20 @@
                 var pc = Math.floor(Math.random() * 3);
                 var pDmg = 0, eDmg = 0;
                 if (m.val === -1) {
-                    eDmg = 8;
-                    show.textContent = "🛡️防御 → -8";
+                    pDmg = Math.ceil(BASE_DMG * (1 - DEFEND_REDUCTION));
+                    eDmg = 0;
+                    show.textContent = "🛡️ 防御 → 受到 " + pDmg + " 点伤害（减半）";
                 } else {
                     if (m.val === pc) {
                         pDmg = 15; eDmg = 15;
                         show.textContent = "⚔️ 平局互伤";
                     } else if ((m.val + 1) % 3 === pc) {
                         pCombo++;
-                        eDmg = 20 + pCombo * 2;
+                        eDmg = BASE_DMG + pCombo * 2;
                         show.textContent = "💥 你克对手！";
                     } else {
                         pCombo = 0;
-                        pDmg = 20;
+                        pDmg = BASE_DMG;
                         show.textContent = "😣 被克了";
                     }
                 }
@@ -1341,7 +1330,7 @@
                     t.className = "tip tip-err"; t.textContent = "😢 你输了";
                 } else {
                     t.className = "tip tip-info";
-                    t.textContent = "你: " + pH + "HP | 对手: " + eH + "HP";
+                    t.textContent = (m.val === -1 ? "🛡️ 防御生效，本回合伤害减半。 " : "") + "你: " + pH + "HP | 对手: " + eH + "HP";
                 }
             });
             gc.appendChild(b);
@@ -1351,6 +1340,12 @@
     };
 
 })();
+
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    window.addEventListener("load", function() {
+        navigator.serviceWorker.register("sw.js").catch(function() {});
+    });
+}
 </script>
 </body>
 </html>
